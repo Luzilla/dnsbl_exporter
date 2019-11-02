@@ -1,5 +1,7 @@
 # dnsbl-exporter
 
+[![Maintainability](https://api.codeclimate.com/v1/badges/31b95e6c679f60e30bea/maintainability)](https://codeclimate.com/github/Luzilla/dnsbl_exporter/maintainability)
+
 This is a server which checks the configured hosts against various DNSBL (sometimes refered to as RBLs).
 
 The idea is to scrape `/metrics` using Prometheus to create graphs, alerts, and so on.
