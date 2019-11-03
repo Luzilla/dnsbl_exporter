@@ -55,6 +55,10 @@ func main() {
 			Usage: "Path under which to expose metrics.",
 		},
 		cli.BoolFlag{
+			Name:  "web.include-exporter-metrics",
+			Usage: "Include metrics about the exporter itself (promhttp_*, process_*, go_*).",
+		},
+		cli.BoolFlag{
 			Name:  "log.debug",
 			Usage: "Enable more output in the logs, otherwise INFO.",
 		},
@@ -97,10 +101,30 @@ func main() {
 		rbls := config.GetRbls(cfgRbls)
 		targets := config.GetTargets(cfgTargets)
 
+		registry := prometheus.NewRegistry()
 		collector := collector.NewRblCollector(rbls, targets, ctx.String("config.dns-resolver"))
-		prometheus.MustRegister(collector)
+		registry.MustRegister(collector)
 
-		http.Handle(ctx.String("web.telemetry-path"), promhttp.Handler())
+		registryExporter := prometheus.NewRegistry()
+
+		if ctx.Bool("web.include-exporter-metrics") {
+			log.Infoln("Exposing exporter metrics")
+
+			registryExporter.MustRegister(
+				prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
+				prometheus.NewGoCollector(),
+			)
+		}
+
+		handler := promhttp.HandlerFor(
+			prometheus.Gatherers{registry, registryExporter},
+			promhttp.HandlerOpts{
+				ErrorHandling: promhttp.ContinueOnError,
+				Registry:      registry,
+			},
+		)
+
+		http.Handle(ctx.String("web.telemetry-path"), handler)
 
 		log.Infoln("Listening on", ctx.String("web.listen-address"))
 		log.Fatal(http.ListenAndServe(ctx.String("web.listen-address"), nil))
