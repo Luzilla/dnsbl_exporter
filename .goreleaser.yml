@@ -9,7 +9,7 @@ before:
     # you may remove this if you don't need go generate
     - go generate ./...
 builds:
-- main: ./main.go
+- main: ./dnsbl_exporter.go
   binary: dnsbl-exporter
   ldflags: -s -w -X main.exporterVersion={{.Version}}
   goos:
