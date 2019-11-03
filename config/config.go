@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 )
 

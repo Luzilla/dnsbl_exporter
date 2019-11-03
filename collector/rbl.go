@@ -7,7 +7,7 @@ import (
 
 	"github.com/Luzilla/godnsbl"
 	"github.com/miekg/dns"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // Rblresult extends godnsbl and adds RBL name
