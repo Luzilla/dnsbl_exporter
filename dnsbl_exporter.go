@@ -54,14 +54,31 @@ func main() {
 			Value: "/metrics",
 			Usage: "Path under which to expose metrics.",
 		},
-		// fixme: use this to set log level
 		cli.BoolFlag{
-			Name:  "debug",
-			Usage: "Enable more output (stdout)",
+			Name:  "log.debug",
+			Usage: "Enable more output in the logs, otherwise INFO.",
+		},
+		cli.StringFlag{
+			Name:  "log.output",
+			Value: "stdout",
+			Usage: "Destination of our logs: stdout, stderr",
 		},
 	}
 
 	app.Action = func(ctx *cli.Context) error {
+		// setup logging
+		switch ctx.String("log.output") {
+		case "stdout":
+			log.SetOutput(os.Stdout)
+		case "stderr":
+			log.SetOutput(os.Stderr)
+		default:
+			cli.ShowAppHelp(ctx)
+			return cli.NewExitError("We currently support only stdout and stderr: --log.output", 2)
+		}
+		if ctx.Bool("log.debug") {
+			log.SetLevel(log.DebugLevel)
+		}
 
 		cfgRbls := config.LoadFile(ctx.String("config.rbls"), "rbl")
 		cfgTargets := config.LoadFile(ctx.String("config.targets"), "targets")

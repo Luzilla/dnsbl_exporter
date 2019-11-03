@@ -24,7 +24,8 @@ $ dnsbl-exporter -h
 --config.targets value       Configuration file which contains the targets to check. (default: "./targets.ini")
 --web.listen-address value   Address to listen on for web interface and telemetry. (default: ":9211")
 --web.telemetry-path value   Path under which to expose metrics. (default: "/metrics")
---debug                      Enable more output (stdout)
+--log.debug                  Enable more output in the logs, otherwise INFO.
+--log.output value           Destination of our logs: stdout, stderr (default: "stdout")
 --help, -h                   show help
 --version, -V                Print the version information.
 ```
