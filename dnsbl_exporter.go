@@ -19,6 +19,16 @@ var exporterName string = "dnsbl-exporter"
 var exporterVersion string
 var exporterRev string
 
+func createCollector(rbls []string, targets []string, resolver string) *collector.RblCollector {
+	collector := collector.NewRblCollector(rbls, targets, resolver)
+
+	return collector
+}
+
+func createRegistry() *prometheus.Registry {
+	return prometheus.NewRegistry()
+}
+
 func main() {
 	cli.VersionFlag = cli.BoolFlag{
 		Name:  "version, V",
@@ -101,11 +111,12 @@ func main() {
 		rbls := config.GetRbls(cfgRbls)
 		targets := config.GetTargets(cfgTargets)
 
-		registry := prometheus.NewRegistry()
-		collector := collector.NewRblCollector(rbls, targets, ctx.String("config.dns-resolver"))
+		registry := createRegistry()
+
+		collector := createCollector(rbls, targets, ctx.String("config.dns-resolver"))
 		registry.MustRegister(collector)
 
-		registryExporter := prometheus.NewRegistry()
+		registryExporter := createRegistry()
 
 		if ctx.Bool("web.include-exporter-metrics") {
 			log.Infoln("Exposing exporter metrics")
@@ -117,7 +128,10 @@ func main() {
 		}
 
 		handler := promhttp.HandlerFor(
-			prometheus.Gatherers{registry, registryExporter},
+			prometheus.Gatherers{
+				registry,
+				registryExporter,
+			},
 			promhttp.HandlerOpts{
 				ErrorHandling: promhttp.ContinueOnError,
 				Registry:      registry,
