@@ -19,6 +19,16 @@ var exporterName string = "dnsbl-exporter"
 var exporterVersion string
 var exporterRev string
 
+func createCollector(rbls []string, targets []string, resolver string) *collector.RblCollector {
+	collector := collector.NewRblCollector(rbls, targets, resolver)
+
+	return collector
+}
+
+func createRegistry() *prometheus.Registry {
+	return prometheus.NewRegistry()
+}
+
 func main() {
 	cli.VersionFlag = cli.BoolFlag{
 		Name:  "version, V",
@@ -53,6 +63,10 @@ func main() {
 			Name:  "web.telemetry-path",
 			Value: "/metrics",
 			Usage: "Path under which to expose metrics.",
+		},
+		cli.BoolFlag{
+			Name:  "web.include-exporter-metrics",
+			Usage: "Include metrics about the exporter itself (promhttp_*, process_*, go_*).",
 		},
 		cli.BoolFlag{
 			Name:  "log.debug",
@@ -97,10 +111,34 @@ func main() {
 		rbls := config.GetRbls(cfgRbls)
 		targets := config.GetTargets(cfgTargets)
 
-		collector := collector.NewRblCollector(rbls, targets, ctx.String("config.dns-resolver"))
-		prometheus.MustRegister(collector)
+		registry := createRegistry()
 
-		http.Handle(ctx.String("web.telemetry-path"), promhttp.Handler())
+		collector := createCollector(rbls, targets, ctx.String("config.dns-resolver"))
+		registry.MustRegister(collector)
+
+		registryExporter := createRegistry()
+
+		if ctx.Bool("web.include-exporter-metrics") {
+			log.Infoln("Exposing exporter metrics")
+
+			registryExporter.MustRegister(
+				prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
+				prometheus.NewGoCollector(),
+			)
+		}
+
+		handler := promhttp.HandlerFor(
+			prometheus.Gatherers{
+				registry,
+				registryExporter,
+			},
+			promhttp.HandlerOpts{
+				ErrorHandling: promhttp.ContinueOnError,
+				Registry:      registry,
+			},
+		)
+
+		http.Handle(ctx.String("web.telemetry-path"), handler)
 
 		log.Infoln("Listening on", ctx.String("web.listen-address"))
 		log.Fatal(http.ListenAndServe(ctx.String("web.listen-address"), nil))
