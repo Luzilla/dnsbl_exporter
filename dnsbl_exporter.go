@@ -94,8 +94,15 @@ func main() {
 			log.SetLevel(log.DebugLevel)
 		}
 
-		cfgRbls := config.LoadFile(ctx.String("config.rbls"), "rbl")
-		cfgTargets := config.LoadFile(ctx.String("config.targets"), "targets")
+		cfgRbls, err := config.LoadFile(ctx.String("config.rbls"), "rbl")
+		if err != nil {
+			return err
+		}
+
+		cfgTargets, err := config.LoadFile(ctx.String("config.targets"), "targets")
+		if err != nil {
+			return err
+		}
 
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`<html>
@@ -140,7 +147,7 @@ func main() {
 
 		http.Handle(ctx.String("web.telemetry-path"), handler)
 
-		err := http.ListenAndServe(ctx.String("web.listen-address"), nil)
+		err = http.ListenAndServe(ctx.String("web.listen-address"), nil)
 		if err != nil {
 			return err
 		}

@@ -1,24 +1,33 @@
 package config
 
 import (
+	"errors"
+
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 )
 
 // ValidateConfig validate the supplied configuration, e.g. check if we have "server="
-func ValidateConfig(cfg *ini.File, section string) {
-	if !cfg.Section(section).HasKey("server") {
-		log.Fatal("Please add a few server= entries to your rbls.ini")
+func ValidateConfig(cfg *ini.File, section string) error {
+	configSection, err := cfg.GetSection(section)
+	if err != nil {
+		return errors.New("Section does not exists")
 	}
+
+	if !configSection.HasKey("server") {
+		return errors.New("Please add a few server= entries to your rbls.ini")
+	}
+
+	return nil
 }
 
-func loadConfig(path string) *ini.File {
+func loadConfig(path string) (*ini.File, error) {
 	cfg, err := ini.ShadowLoad(path)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return cfg
+	return cfg, err
 }
 
 // GetRbls returns all rbls from the config
@@ -32,11 +41,18 @@ func GetTargets(cfg *ini.File) []string {
 }
 
 // LoadFile ...
-func LoadFile(path string, key string) *ini.File {
+func LoadFile(path string, section string) (*ini.File, error) {
 	log.Debugln("Loading configuration...", path)
-	cfg := loadConfig(path)
 
-	ValidateConfig(cfg, key)
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return nil, err
+	}
 
-	return cfg
+	err = ValidateConfig(cfg, section)
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, err
 }
