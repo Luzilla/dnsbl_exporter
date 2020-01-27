@@ -140,8 +140,12 @@ func main() {
 
 		http.Handle(ctx.String("web.telemetry-path"), handler)
 
+		err := http.ListenAndServe(ctx.String("web.listen-address"), nil)
+		if err != nil {
+			return err
+		}
+
 		log.Infoln("Listening on", ctx.String("web.listen-address"))
-		log.Fatal(http.ListenAndServe(ctx.String("web.listen-address"), nil))
 
 		return nil
 	}
