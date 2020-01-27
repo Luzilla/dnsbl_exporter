@@ -62,7 +62,7 @@ func (rbl *Rbl) getARecords(target string) ([]string, error) {
 
 	var list []string
 
-	if len(result.Answer) > 0 {
+	if err == nil && len(result.Answer) > 0 {
 		for _, ans := range result.Answer {
 			if t, ok := ans.(*dns.A); ok {
 				log.Debugf("We have an A-Record %s for %s", t.A.String(), target)
