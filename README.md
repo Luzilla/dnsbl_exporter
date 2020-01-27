@@ -59,3 +59,12 @@ $ sudo unbound -d -vvvv
  $ dig +short @127.0.0.1 spamhaus.org
 192.42.118.104
 ```
+
+## Releasing
+
+(This is for myself, since I tend to forget things.)
+
+ 1. Create a release on Github
+ 1. Assemble changelog based on PR merges, etc.
+ 1. Tag must be `v1.0.0` (semantic versioning, prefixed by `v`)
+ 1. CircleCI will pick it up and build the binaries
