@@ -1,34 +1,91 @@
 version: 2.1
+
+# DRY
+x_ref:
+  docker_golang: &docker_golang
+    image: circleci/golang:1.12
+  docker_goreleaser: &docker_goreleaser
+    image: goreleaser/goreleaser
+  work_dir: &work_dir
+    working_directory: ~/dnsbl_exporter
+
 workflows:
   main:
     jobs:
       - test
-      - build
+      - build:
+          requires:
+            - test
+      - integration:
+          requires:
+            - build
       - release:
           # Only run this job on git tag pushes
+          requires:
+            - test
           filters:
             branches:
               ignore: /.*/
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-.*)*/
+
 jobs:
   test:
+    <<: *work_dir
     docker:
-      - image: circleci/golang:1.12
+      - *docker_golang
     steps:
       - checkout
       - run: go mod download
       - run: go test ./...
   build:
+    <<: *work_dir
     docker:
-      - image: goreleaser/goreleaser
+      - *docker_goreleaser
     steps:
       - checkout
-      - run: goreleaser check
-      - run: goreleaser --snapshot --rm-dist
+      - run:
+          name: Check config for goreleaser
+          command: goreleaser check
+      - run:
+          name: Build snapshot
+          command: goreleaser release --snapshot --rm-dist
+      - run:
+          name: Copy .ini files next to the snapshot
+          command: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64
+      - persist_to_workspace:
+          root: dist
+          paths:
+            - dnsbl_exporter_linux_amd64
+  integration:
+    <<: *work_dir
+    docker:
+      - *docker_golang
+      # starts a service "unbound"
+      - image: klutchell/unbound
+        name: unbound
+    steps:
+      - attach_workspace:
+          at: ~/dnsbl_exporter/dist
+      - run:
+          name: Where am I?
+          command: ls -lah ./dist/
+      - run:
+          name: Start dnsbl_exporter
+          command: cd ./dist/dnsbl_exporter_linux_amd64/ && ./dnsbl-exporter --config.dns-resolver=unbound
+          background: true
+      - run:
+          name: Test "/" exists
+          command: curl -I http://127.0.0.1:9211/
+      - run:
+          name: Test "/metrics" exists
+          command: curl -I http://127.0.0.1:9211/metrics
+      - run:
+          name: Test "/metrics" with targets
+          command: curl -i http://127.0.0.1:9211/metrics
   release:
     docker:
-      - image: goreleaser/goreleaser
+      - *docker_goreleaser
     steps:
       - checkout
       - run: goreleaser release --rm-dist
