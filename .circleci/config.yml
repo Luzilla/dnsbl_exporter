@@ -10,7 +10,7 @@ x_ref:
     working_directory: ~/dnsbl_exporter
 
 workflows:
-  main:
+  pr:
     jobs:
       - test
       - build:
@@ -19,15 +19,17 @@ workflows:
       - integration:
           requires:
             - build
+  release:
+    jobs:
+      - test
       - release:
-          # Only run this job on git tag pushes
           requires:
             - test
           filters:
             branches:
               ignore: /.*/
             tags:
-              only: /v[0-9]+(\.[0-9]+)*(-.*)*/
+              only: /^v.*/
 
 jobs:
   test:
