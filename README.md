@@ -35,7 +35,7 @@ $ dnsbl-exporter -h
  1. Go to [release](https://github.com/Luzilla/dnsbl_exporter/releases) and grab a release for your platform.
  1. Get `rbls.ini` and put it next to the binary.
  1. Get `targets.ini`, and customize. Or use the defaults.
- 1. `./dnsrbl-exporter`
+ 1. `./dnsbl-exporter`
 
  Go to http://127.0.0.1:9211/ in your browser.
 
