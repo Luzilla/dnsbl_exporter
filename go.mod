@@ -9,6 +9,6 @@ require (
 	github.com/miekg/dns v1.1.27
 	github.com/sirupsen/logrus v1.6.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
-	github.com/urfave/cli v1.22.4
+	github.com/urfave/cli v1.22.5
 	gopkg.in/ini.v1 v1.56.0
 )
