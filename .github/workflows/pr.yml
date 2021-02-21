@@ -1,0 +1,73 @@
+name: pr
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.14.x, 1.15.x]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Test
+      run: go test ./...
+
+  snapshot:
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+          args: release --rm-dist --snapshot
+      - name: Copy .ini files
+        run: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: dnsbl_exporter
+          path: dist/dnsbl_exporter_linux_amd64
+
+  integration:
+    runs-on: ubuntu-latest
+    needs:
+      - snapshot
+    services:
+      unbound:
+        image: klutchell/unbound:latest
+        ports:
+          - 5053:5053
+          - 5053:5053/udp
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: dnsbl_exporter
+      - run: ls -lah dist/
+      - name: Start dnsbl_exporter 
+        run: ./dnsbl-exporter --config.dns-resolver=unbound &
+        working-directory: ./dist/dnsbl_exporter_linux_amd64/
+      - name: Test "/" exists
+        run: curl -I http://127.0.0.1:9211/
+      - name: Test "/metrics" exists
+        run: curl -I http://127.0.0.1:9211/metrics
+      - name: Test "/metrics" with targets
+        run: curl -i http://127.0.0.1:9211/metrics
