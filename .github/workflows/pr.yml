@@ -45,3 +45,30 @@ jobs:
         with:
           name: dnsbl_exporter
           path: dist/dnsbl_exporter_linux_amd64
+
+  integration:
+    runs-on: ubuntu-latest
+    needs:
+      - snapshot
+    services:
+      unbound:
+        image: klutchell/unbound:latest
+        ports:
+          - 5053:5053
+          - 5053:5053/udp
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: dnsbl_exporter
+      - name: Allow running exporter
+        run: chmod +x ./dnsbl-exporter
+      - name: Start dnsbl_exporter 
+        run: ./dnsbl-exporter --config.dns-resolver=unbound:5053 &
+        working-directory: ./dnsbl_exporter
+      - name: Test "/" exists
+        run: curl -I http://127.0.0.1:9211/
+      - name: Test "/metrics" exists
+        run: curl -I http://127.0.0.1:9211/metrics
+      - name: Test "/metrics" with targets
+        run: curl -i http://127.0.0.1:9211/metrics

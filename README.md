@@ -64,7 +64,6 @@ $ sudo unbound -d -vvvv
 
 (This is for myself, since I tend to forget things.)
 
- 1. Create a release on Github
- 1. Assemble changelog based on PR merges, etc.
- 1. Tag must be `v1.0.0` (semantic versioning, prefixed by `v`)
- 1. CircleCI will pick it up and build the binaries
+ 1. `git tag -a x.y.z`
+ 1. `git push --tags`
+ 1. GitHub Actions/GoReleaser will build a pretty release

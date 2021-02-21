@@ -1,12 +1,9 @@
-# This is an example goreleaser.yaml file with some sane defaults.
-# Make sure to check the documentation at http://goreleaser.com
+---
 project_name: dnsbl_exporter
 
 before:
   hooks:
-    # you may remove this if you don't use vgo
     - go mod tidy
-    # you may remove this if you don't need go generate
     - go generate ./...
 builds:
 - main: ./dnsbl_exporter.go
