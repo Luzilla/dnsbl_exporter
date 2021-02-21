@@ -65,7 +65,6 @@ jobs:
         run: chmod +x ./dnsbl-exporter
       - name: Start dnsbl_exporter 
         run: ./dnsbl-exporter --config.dns-resolver=unbound:5053 &
-        working-directory: ./dnsbl_exporter
       - name: Test "/" exists
         run: curl -I http://127.0.0.1:9211/
       - name: Test "/metrics" exists
