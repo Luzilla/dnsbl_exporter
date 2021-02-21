@@ -48,8 +48,14 @@ func (rbl *Rbl) createQuestion(target string, record uint16) *dns.Msg {
 }
 
 func (rbl *Rbl) makeQuery(msg *dns.Msg) (*dns.Msg, error) {
-	// fixme: we should inject the port as well
-	result, rt, err := rbl.DNSClient.Exchange(msg, net.JoinHostPort(rbl.Resolver, "53"))
+	host, port, err := net.SplitHostPort(rbl.Resolver)
+	if err != nil {
+		if err.Error() == "missing port in address" {
+			port = "53"
+		}
+	}
+
+	result, rt, err := rbl.DNSClient.Exchange(msg, net.JoinHostPort(host, port))
 	log.Debugln("Roundtrip", rt) // fixme -> histogram
 
 	return result, err

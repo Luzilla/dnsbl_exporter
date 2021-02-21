@@ -63,7 +63,7 @@ jobs:
           name: dnsbl_exporter
       - run: ls -lah dist/
       - name: Start dnsbl_exporter 
-        run: ./dnsbl-exporter --config.dns-resolver=unbound &
+        run: ./dnsbl-exporter --config.dns-resolver=unbound:5053 &
         working-directory: ./dist/dnsbl_exporter_linux_amd64/
       - name: Test "/" exists
         run: curl -I http://127.0.0.1:9211/
