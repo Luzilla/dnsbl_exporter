@@ -61,10 +61,11 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: dnsbl_exporter
-      - run: ls -lah dist/
+      - run: ls -lah
+        working-directory: ./dnsbl_exporter
       - name: Start dnsbl_exporter 
         run: ./dnsbl-exporter --config.dns-resolver=unbound:5053 &
-        working-directory: ./dist/dnsbl_exporter_linux_amd64/
+        working-directory: ./dnsbl_exporter
       - name: Test "/" exists
         run: curl -I http://127.0.0.1:9211/
       - name: Test "/metrics" exists
