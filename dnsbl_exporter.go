@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/luzilla/dnsbl_exporter/collector"
-	"github.com/luzilla/dnsbl_exporter/config"
+	"github.com/Luzilla/dnsbl_exporter/collector"
+	"github.com/Luzilla/dnsbl_exporter/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/urfave/cli"
 

@@ -3,7 +3,7 @@ version: 2.1
 # DRY
 x_ref:
   docker_golang: &docker_golang
-    image: circleci/golang:1.12
+    image: circleci/golang:1.16
   docker_goreleaser: &docker_goreleaser
     image: goreleaser/goreleaser
   work_dir: &work_dir
@@ -12,23 +12,12 @@ x_ref:
 workflows:
   pr:
     jobs:
-      - test
-      - build:
-          requires:
-            - test
+      - build
       - integration:
           requires:
             - build
 
 jobs:
-  test:
-    <<: *work_dir
-    docker:
-      - *docker_golang
-    steps:
-      - checkout
-      - run: go mod download
-      - run: go test ./...
   build:
     <<: *work_dir
     docker:
