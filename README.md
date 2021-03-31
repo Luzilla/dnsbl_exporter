@@ -1,6 +1,6 @@
 # dnsbl-exporter
 
-[![CircleCI](https://circleci.com/gh/Luzilla/dnsbl_exporter.svg?style=svg)](https://circleci.com/gh/Luzilla/dnsbl_exporter) [![Maintainability](https://api.codeclimate.com/v1/badges/31b95e6c679f60e30bea/maintainability)](https://codeclimate.com/github/Luzilla/dnsbl_exporter/maintainability)
+[![CircleCI](https://circleci.com/gh/Luzilla/dnsbl_exporter.svg?style=svg)](https://circleci.com/gh/Luzilla/dnsbl_exporter) [![pr](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml/badge.svg)](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml) [![Maintainability](https://api.codeclimate.com/v1/badges/31b95e6c679f60e30bea/maintainability)](https://codeclimate.com/github/Luzilla/dnsbl_exporter/maintainability)
 
 This is a server which checks the configured hosts against various DNSBL (sometimes refered to as RBLs).
 

@@ -12,23 +12,12 @@ x_ref:
 workflows:
   pr:
     jobs:
-      - test
-      - build:
-          requires:
-            - test
+      - build
       - integration:
           requires:
             - build
 
 jobs:
-  test:
-    <<: *work_dir
-    docker:
-      - *docker_golang
-    steps:
-      - checkout
-      - run: go mod download
-      - run: go test ./...
   build:
     <<: *work_dir
     docker:
