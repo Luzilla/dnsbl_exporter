@@ -10,19 +10,14 @@ builds:
   binary: dnsbl-exporter
   ldflags: -s -w -X main.exporterVersion={{.Version}}
   goos:
-  - darwin
-  - freebsd
   - linux
-  - windows
   env:
   - CGO_ENABLED=0
 archives:
 - files:
   - none*
   replacements:
-    darwin: Darwin
     linux: Linux
-    windows: Windows
     386: i386
     amd64: x86_64
 checksum:

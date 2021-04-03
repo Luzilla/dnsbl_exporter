@@ -41,8 +41,8 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "config.dns-resolver",
-			Value: "127.0.0.1",
-			Usage: "IP address of the resolver to use.",
+			Value: "127.0.0.1:53",
+			Usage: "IP address[:port] of the resolver to use.",
 		},
 		cli.StringFlag{
 			Name:  "config.rbls",
