@@ -4,14 +4,15 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Luzilla/dnsbl_exporter/app"
 	"github.com/Luzilla/dnsbl_exporter/collector"
 	"github.com/Luzilla/dnsbl_exporter/config"
+
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // The following are customized during build
@@ -30,54 +31,7 @@ func createRegistry() *prometheus.Registry {
 }
 
 func main() {
-	cli.VersionFlag = cli.BoolFlag{
-		Name:  "version, V",
-		Usage: "Print the version information.",
-	}
-
-	app := cli.NewApp()
-	app.Name = exporterName
-	app.Version = exporterVersion
-	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "config.dns-resolver",
-			Value: "127.0.0.1:53",
-			Usage: "IP address[:port] of the resolver to use.",
-		},
-		cli.StringFlag{
-			Name:  "config.rbls",
-			Value: "./rbls.ini",
-			Usage: "Configuration file which contains RBLs",
-		},
-		cli.StringFlag{
-			Name:  "config.targets",
-			Value: "./targets.ini",
-			Usage: "Configuration file which contains the targets to check.",
-		},
-		cli.StringFlag{
-			Name:  "web.listen-address",
-			Value: ":9211",
-			Usage: "Address to listen on for web interface and telemetry.",
-		},
-		cli.StringFlag{
-			Name:  "web.telemetry-path",
-			Value: "/metrics",
-			Usage: "Path under which to expose metrics.",
-		},
-		cli.BoolFlag{
-			Name:  "web.include-exporter-metrics",
-			Usage: "Include metrics about the exporter itself (promhttp_*, process_*, go_*).",
-		},
-		cli.BoolFlag{
-			Name:  "log.debug",
-			Usage: "Enable more output in the logs, otherwise INFO.",
-		},
-		cli.StringFlag{
-			Name:  "log.output",
-			Value: "stdout",
-			Usage: "Destination of our logs: stdout, stderr",
-		},
-	}
+	app := app.NewApp(exporterName, exporterVersion)
 
 	app.Action = func(ctx *cli.Context) error {
 		// setup logging
