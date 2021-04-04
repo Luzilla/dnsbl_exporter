@@ -1,6 +1,8 @@
+GO_VERSION:=0.16
+
 .PHONY: build
 build:
-	goreleaser --snapshot --rm-dist
+	goreleaser r --snapshot --rm-dist
 
 .PHONY: test
 test:
@@ -9,5 +11,5 @@ test:
 		--rm \
 		-v $(CURDIR):/src/github.com/Luzilla/dnsbl_exporter \
 		-w /src/github.com/Luzilla/dnsbl_exporter \
-		golang:1.16 \
+		golang:$(GO_VERSION) \
 		sh -c "go mod download && go test ./..."

@@ -1,6 +1,6 @@
 # dnsbl-exporter
 
-[![CircleCI](https://circleci.com/gh/Luzilla/dnsbl_exporter.svg?style=svg)](https://circleci.com/gh/Luzilla/dnsbl_exporter) [![pr](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml/badge.svg)](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml) [![Maintainability](https://api.codeclimate.com/v1/badges/31b95e6c679f60e30bea/maintainability)](https://codeclimate.com/github/Luzilla/dnsbl_exporter/maintainability)
+[![pr](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml/badge.svg)](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml) [![Maintainability](https://api.codeclimate.com/v1/badges/31b95e6c679f60e30bea/maintainability)](https://codeclimate.com/github/Luzilla/dnsbl_exporter/maintainability) [![Go Report Card](https://goreportcard.com/badge/github.com/Luzilla/dnsbl_exporter)](https://goreportcard.com/report/github.com/Luzilla/dnsbl_exporter)
 
 This is a server which checks the configured hosts against various DNSBL (sometimes refered to as RBLs).
 
@@ -19,7 +19,7 @@ Otherwise:
 ```
 $ dnsbl-exporter -h
 ...
---config.dns-resolver value  IP address of the resolver to use. (default: "127.0.0.1")
+--config.dns-resolver value  IP address of the resolver to use. (default: "127.0.0.1:53")
 --config.rbls value          Configuration file which contains RBLs (default: "./rbls.ini")
 --config.targets value       Configuration file which contains the targets to check. (default: "./targets.ini")
 --web.listen-address value   Address to listen on for web interface and telemetry. (default: ":9211")
