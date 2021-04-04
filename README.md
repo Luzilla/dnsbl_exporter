@@ -19,7 +19,7 @@ Otherwise:
 ```
 $ dnsbl-exporter -h
 ...
---config.dns-resolver value  IP address of the resolver to use. (default: "127.0.0.1")
+--config.dns-resolver value  IP address of the resolver to use. (default: "127.0.0.1:53")
 --config.rbls value          Configuration file which contains RBLs (default: "./rbls.ini")
 --config.targets value       Configuration file which contains the targets to check. (default: "./targets.ini")
 --web.listen-address value   Address to listen on for web interface and telemetry. (default: ":9211")
