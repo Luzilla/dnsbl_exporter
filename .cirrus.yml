@@ -1,0 +1,14 @@
+---
+freebsd_instance:
+  image_family: freebsd-13-0
+
+task:
+  provision_script:
+    - pkg install -y go git
+  script:
+    - uname -a
+    - go mod tidy
+    - go mod verify
+    - go mod vendor -v
+    - go build ./dnsbl_exporter.go
+    - ./dnsbl_exporter -h
