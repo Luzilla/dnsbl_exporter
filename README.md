@@ -60,6 +60,12 @@ $ sudo unbound -d -vvvv
 192.42.118.104
 ```
 
+## License / Author
+
+This code is Apache 2.0 licensed.
+
+For questions, comments or anything else, [please get in touch](https://www.luzilla-capital.com).
+
 ## Releasing
 
 (This is for myself, since I tend to forget things.)
