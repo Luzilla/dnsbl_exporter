@@ -1,6 +1,6 @@
 # dnsbl-exporter
 
-[![pr](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml/badge.svg)](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml) [![Maintainability](https://api.codeclimate.com/v1/badges/31b95e6c679f60e30bea/maintainability)](https://codeclimate.com/github/Luzilla/dnsbl_exporter/maintainability) [![Go Report Card](https://goreportcard.com/badge/github.com/Luzilla/dnsbl_exporter)](https://goreportcard.com/report/github.com/Luzilla/dnsbl_exporter)
+[![pr](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml/badge.svg)](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml) [![Maintainability](https://api.codeclimate.com/v1/badges/31b95e6c679f60e30bea/maintainability)](https://codeclimate.com/github/Luzilla/dnsbl_exporter/maintainability) [![Go Report Card](https://goreportcard.com/badge/github.com/Luzilla/dnsbl_exporter)](https://goreportcard.com/report/github.com/Luzilla/dnsbl_exporter) ![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/Luzilla/dnsbl_exporter?include_prereleases&style=social)
 
 This is a server which checks the configured hosts against various DNSBL (sometimes refered to as RBLs).
 
@@ -12,11 +12,11 @@ The idea is to scrape `/metrics` using Prometheus to create graphs, alerts, and 
 
 ### Configuration
 
-See `rbls.ini` and `targets.ini` files in this repository.
+See `rbls.ini` and `targets.ini` files in this repository. The files follow the nagios format as this exporter is meant to be a drop-in replacement so you can factor out Nagios, one (simple) step at a time. :-)
 
 Otherwise:
 
-```
+```sh
 $ dnsbl-exporter -h
 ...
 --config.dns-resolver value  IP address of the resolver to use. (default: "127.0.0.1:53")
@@ -59,6 +59,12 @@ $ sudo unbound -d -vvvv
  $ dig +short @127.0.0.1 spamhaus.org
 192.42.118.104
 ```
+
+## License / Author
+
+This code is Apache 2.0 licensed.
+
+For questions, comments or anything else, [please get in touch](https://www.luzilla-capital.com).
 
 ## Releasing
 
