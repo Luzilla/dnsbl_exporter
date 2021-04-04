@@ -12,11 +12,11 @@ The idea is to scrape `/metrics` using Prometheus to create graphs, alerts, and 
 
 ### Configuration
 
-See `rbls.ini` and `targets.ini` files in this repository.
+See `rbls.ini` and `targets.ini` files in this repository. The files follow the nagios format as this exporter is meant to be a drop-in replacement so you can factor out Nagios, one (simple) step at a time. :-)
 
 Otherwise:
 
-```
+```sh
 $ dnsbl-exporter -h
 ...
 --config.dns-resolver value  IP address of the resolver to use. (default: "127.0.0.1:53")
