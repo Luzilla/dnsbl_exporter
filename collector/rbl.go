@@ -146,7 +146,15 @@ func (rbl *Rbl) lookup(rblList string, targetHost string) []Rblresult {
 		res.Address = ip
 		res.Rbl = rblList
 
-		revIP := godnsbl.Reverse(net.ParseIP(ip))
+		// attempt to "validate" the IP
+		ValidIPAddress := net.ParseIP(ip)
+		if ValidIPAddress == nil {
+			log.Errorf("Unable to parse IP: %s", ip)
+			continue
+		}
+
+		// reverse it, for the look up
+		revIP := godnsbl.Reverse(ValidIPAddress)
 
 		rbl.query(revIP, rblList, &res)
 
