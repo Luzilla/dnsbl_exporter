@@ -61,6 +61,8 @@ func (rbl *Rbl) makeQuery(msg *dns.Msg) (*dns.Msg, error) {
 	return result, err
 }
 
+// leaving this note for future me: maybe asking for As is not enough?
+// what about CNAMEs, or AAAAs, etc..
 func (rbl *Rbl) getARecords(target string) ([]string, error) {
 	msg := rbl.createQuestion(target, dns.TypeA)
 
@@ -131,7 +133,7 @@ func (rbl *Rbl) lookup(rblList string, targetHost string) []Rblresult {
 	if addr == nil {
 		ipsA, err := rbl.getARecords(targetHost)
 		if err != nil {
-			log.Debugln(err)
+			log.Errorln(err)
 		}
 
 		ips = ipsA
@@ -146,7 +148,15 @@ func (rbl *Rbl) lookup(rblList string, targetHost string) []Rblresult {
 		res.Address = ip
 		res.Rbl = rblList
 
-		revIP := godnsbl.Reverse(net.ParseIP(ip))
+		// attempt to "validate" the IP
+		ValidIPAddress := net.ParseIP(ip)
+		if ValidIPAddress == nil {
+			log.Errorf("Unable to parse IP: %s", ip)
+			continue
+		}
+
+		// reverse it, for the look up
+		revIP := godnsbl.Reverse(ValidIPAddress)
 
 		rbl.query(revIP, rblList, &res)
 
@@ -156,18 +166,17 @@ func (rbl *Rbl) lookup(rblList string, targetHost string) []Rblresult {
 	return rbl.Results
 }
 
-// Update runs the checks for an against against all "rbls"
+// Update runs the checks for an IP against against all "rbls"
 func (rbl *Rbl) Update(ip string, rbls []string) {
 	// from: godnsbl
 	wg := &sync.WaitGroup{}
 
 	for _, source := range rbls {
-
 		wg.Add(1)
 		go func(source string, ip string) {
 			defer wg.Done()
 
-			log.Debugf("Working blacklist %s", source)
+			log.Debugf("Working blacklist %s (ip: %s)", source, ip)
 
 			results := rbl.lookup(source, ip)
 			if len(results) == 0 {
