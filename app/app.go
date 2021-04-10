@@ -23,24 +23,28 @@ func NewApp(name string, version string, log *logrus.Logger) DNSBLApp {
 	app := &cli.App{
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "config.dns-resolver",
-				Value: "127.0.0.1:53",
-				Usage: "IP address[:port] of the resolver to use.",
+				Name:    "config.dns-resolver",
+				Value:   "127.0.0.1:53",
+				Usage:   "IP address[:port] of the resolver to use.",
+				EnvVars: []string{"DNSBL_EXP_RESOLVER"},
 			},
 			&cli.StringFlag{
-				Name:  "config.rbls",
-				Value: "./rbls.ini",
-				Usage: "Configuration file which contains RBLs",
+				Name:    "config.rbls",
+				Value:   "./rbls.ini",
+				Usage:   "Configuration file which contains RBLs",
+				EnvVars: []string{"DNSBL_EXP_RBLS"},
 			},
 			&cli.StringFlag{
-				Name:  "config.targets",
-				Value: "./targets.ini",
-				Usage: "Configuration file which contains the targets to check.",
+				Name:    "config.targets",
+				Value:   "./targets.ini",
+				Usage:   "Configuration file which contains the targets to check.",
+				EnvVars: []string{"DNSBL_EXP_TARGETS"},
 			},
 			&cli.StringFlag{
-				Name:  "web.listen-address",
-				Value: ":9211",
-				Usage: "Address to listen on for web interface and telemetry.",
+				Name:    "web.listen-address",
+				Value:   ":9211",
+				Usage:   "Address to listen on for web interface and telemetry.",
+				EnvVars: []string{"DNSBL_EXP_LISTEN"},
 			},
 			&cli.StringFlag{
 				Name:  "web.telemetry-path",

@@ -19,15 +19,18 @@ Otherwise:
 ```sh
 $ dnsbl-exporter -h
 ...
---config.dns-resolver value  IP address of the resolver to use. (default: "127.0.0.1:53")
---config.rbls value          Configuration file which contains RBLs (default: "./rbls.ini")
---config.targets value       Configuration file which contains the targets to check. (default: "./targets.ini")
---web.listen-address value   Address to listen on for web interface and telemetry. (default: ":9211")
---web.telemetry-path value   Path under which to expose metrics. (default: "/metrics")
---log.debug                  Enable more output in the logs, otherwise INFO.
---log.output value           Destination of our logs: stdout, stderr (default: "stdout")
---help, -h                   show help
---version, -V                Print the version information.
+
+GLOBAL OPTIONS:
+   --config.dns-resolver value     IP address[:port] of the resolver to use. (default: "127.0.0.1:53") [$DNSBL_EXP_RESOLVER]
+   --config.rbls value             Configuration file which contains RBLs (default: "./rbls.ini") [$DNSBL_EXP_RBLS]
+   --config.targets value          Configuration file which contains the targets to check. (default: "./targets.ini") [$DNSBL_EXP_TARGETS]
+   --web.listen-address value      Address to listen on for web interface and telemetry. (default: ":9211") [$DNSBL_EXP_LISTEN]
+   --web.telemetry-path value      Path under which to expose metrics. (default: "/metrics")
+   --web.include-exporter-metrics  Include metrics about the exporter itself (promhttp_*, process_*, go_*). (default: false)
+   --log.debug                     Enable more output in the logs, otherwise INFO. (default: false)
+   --log.output value              Destination of our logs: stdout, stderr (default: "stdout")
+   --help, -h                      show help (default: false)
+   --version, -v                   print the version (default: false)
 ```
 
 ### Running
