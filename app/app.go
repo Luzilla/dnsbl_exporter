@@ -10,15 +10,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli/v2"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type DNSBLApp struct {
 	App *cli.App
+	log *logrus.Logger
 }
 
 // NewApp ...
-func NewApp(name string, version string) DNSBLApp {
+func NewApp(name string, version string, log *logrus.Logger) DNSBLApp {
 	app := &cli.App{
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -67,6 +68,7 @@ func NewApp(name string, version string) DNSBLApp {
 
 	return DNSBLApp{
 		App: app,
+		log: log,
 	}
 }
 
@@ -75,15 +77,16 @@ func (app *DNSBLApp) Bootstrap() {
 		// setup logging
 		switch ctx.String("log.output") {
 		case "stdout":
-			log.SetOutput(os.Stdout)
+			app.log.SetOutput(os.Stdout)
 		case "stderr":
-			log.SetOutput(os.Stderr)
+			app.log.SetOutput(os.Stderr)
 		default:
 			cli.ShowAppHelp(ctx)
 			return cli.NewExitError("We currently support only stdout and stderr: --log.output", 2)
 		}
+
 		if ctx.Bool("log.debug") {
-			log.SetLevel(log.DebugLevel)
+			app.log.SetLevel(logrus.DebugLevel)
 		}
 
 		cfgRbls, err := config.LoadFile(ctx.String("config.rbls"), "rbl")
@@ -112,13 +115,18 @@ func (app *DNSBLApp) Bootstrap() {
 
 		registry := createRegistry()
 
-		collector := createCollector(rbls, targets, ctx.String("config.dns-resolver"))
+		collector := createCollector(
+			rbls,
+			targets,
+			ctx.String("config.dns-resolver"),
+			app.log,
+		)
 		registry.MustRegister(collector)
 
 		registryExporter := createRegistry()
 
 		if ctx.Bool("web.include-exporter-metrics") {
-			log.Infoln("Exposing exporter metrics")
+			app.log.Infoln("Exposing exporter metrics")
 
 			registryExporter.MustRegister(
 				prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
@@ -139,12 +147,17 @@ func (app *DNSBLApp) Bootstrap() {
 
 		http.Handle(ctx.String("web.telemetry-path"), handler)
 
+		app.log.Infof(
+			"Starting %s on %s%s",
+			app.App.Name,
+			ctx.String("web.listen-address"),
+			ctx.String("web.telemetry-path"),
+		)
+
 		err = http.ListenAndServe(ctx.String("web.listen-address"), nil)
 		if err != nil {
 			return err
 		}
-
-		log.Infoln("Listening on", ctx.String("web.listen-address"))
 
 		return nil
 	}
@@ -154,8 +167,8 @@ func (app *DNSBLApp) Run(args []string) error {
 	return app.App.Run(args)
 }
 
-func createCollector(rbls []string, targets []string, resolver string) *collector.RblCollector {
-	return collector.NewRblCollector(rbls, targets, resolver)
+func createCollector(rbls []string, targets []string, resolver string, log *logrus.Logger) *collector.RblCollector {
+	return collector.NewRblCollector(rbls, targets, resolver, log)
 }
 
 func createRegistry() *prometheus.Registry {

@@ -2,7 +2,7 @@ package collector
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const namespace = "luzilla"
@@ -17,6 +17,7 @@ type RblCollector struct {
 	rbls              []string
 	resolver          string
 	targets           []string
+	log               *logrus.Logger
 }
 
 func buildFQName(metric string) string {
@@ -24,7 +25,7 @@ func buildFQName(metric string) string {
 }
 
 // NewRblCollector ... creates the collector
-func NewRblCollector(rbls []string, targets []string, resolver string) *RblCollector {
+func NewRblCollector(rbls []string, targets []string, resolver string, log *logrus.Logger) *RblCollector {
 	return &RblCollector{
 		configuredMetric: prometheus.NewDesc(
 			buildFQName("used"),
@@ -53,6 +54,7 @@ func NewRblCollector(rbls []string, targets []string, resolver string) *RblColle
 		rbls:     rbls,
 		resolver: resolver,
 		targets:  targets,
+		log:      log,
 	}
 }
 
@@ -78,7 +80,7 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 
 	for _, host := range hosts {
 
-		log.Debugln("Checking ...", host)
+		c.log.Debugln("Checking ...", host)
 
 		rbl := NewRbl(c.resolver)
 		rbl.Update(host, c.rbls)
@@ -86,7 +88,7 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 		for _, result := range rbl.Results {
 			// this is an "error" from the RBL
 			if result.Error {
-				log.Errorln(result.Text)
+				c.log.Errorln(result.Text)
 			}
 
 			metricValue := 0
