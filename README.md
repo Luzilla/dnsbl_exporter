@@ -42,14 +42,32 @@ GLOBAL OPTIONS:
 
  Go to http://127.0.0.1:9211/ in your browser.
 
+#### Using Docker
+
+There's **no** `:latest` tag by design. But we build individual releases for amd64 and arm64.
+
+````sh
+$ export DNSBL_EXP_RESOLVER=127.0.0.1:53
+$ docker pull ghcr.io/luzilla/dnsbl_exporter:X.Y.Z
+...
+$ docker run -d \
+-e DNSBL_EXP_RESOLVER \
+-v ./configs:/etc/dnsbl-exporter:ro \
+-p 9211:9211 \
+ghcr.io/luzilla/dnsbl_exporter:X.Y.Z
+```
+
 ### Caveat
 
-In order to use this, a _proper_ DNS resolver is needed. Proper means: not Google, not Cloudflare, OpenDNS, etc..
+In order to query RBLs, a _proper_ DNS resolver is needed.
+
+Proper means: not Google, not Cloudflare, OpenDNS, etc..
+
 Instead use a resolver like Unbound.
 
 To test on OSX, follow these steps:
 
-```
+```sh
 $ brew install unbound
 ...
 $ sudo unbound -d -vvvv

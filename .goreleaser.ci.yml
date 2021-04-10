@@ -20,6 +20,23 @@ archives:
     linux: Linux
     386: i386
     amd64: x86_64
+dockers:
+- image_templates:
+  - 'ghcr.io/luzilla/{{.ProjectName}}:edge'
+  dockerfile: Dockerfile
+  use_buildx: true
+  build_flag_templates:
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.name={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+  - "--label=org.opencontainers.image.source={{.GitURL}}"
+  - "--platform=linux/amd64"
+  extra_files:
+  - rbls.ini
+  - targets.ini
+  goarch: amd64
 checksum:
   name_template: 'checksums.txt'
 snapshot:
