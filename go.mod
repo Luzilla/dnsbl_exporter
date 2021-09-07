@@ -10,5 +10,5 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/urfave/cli v1.22.5
-	gopkg.in/ini.v1 v1.62.1
+	gopkg.in/ini.v1 v1.63.0
 )
