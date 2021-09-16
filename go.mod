@@ -8,7 +8,6 @@ require (
 	github.com/Luzilla/godnsbl v1.0.0
 	github.com/miekg/dns v1.1.43
 	github.com/sirupsen/logrus v1.8.1
-	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/urfave/cli v1.22.5
-	gopkg.in/ini.v1 v1.63.0
+	gopkg.in/ini.v1 v1.63.2
 )
