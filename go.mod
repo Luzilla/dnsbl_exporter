@@ -9,5 +9,5 @@ require (
 	github.com/miekg/dns v1.1.43
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli v1.22.5
-	gopkg.in/ini.v1 v1.66.0
+	gopkg.in/ini.v1 v1.66.1
 )
