@@ -95,6 +95,7 @@ func (rbl *Rbl) lookup(rblList string, targetHost string) []Rblresult {
 		ipsA, err := rbl.util.GetARecords(targetHost)
 		if err != nil {
 			log.Errorln(err)
+			return rbl.Results
 		}
 
 		ips = ipsA
