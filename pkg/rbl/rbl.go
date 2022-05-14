@@ -1,4 +1,4 @@
-package collector
+package rbl
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ type Rbl struct {
 }
 
 // NewRbl ... factory
-func NewRbl(util *dns.DNSUtil) Rbl {
+func New(util *dns.DNSUtil) Rbl {
 	var results []Rblresult
 
 	rbl := Rbl{
