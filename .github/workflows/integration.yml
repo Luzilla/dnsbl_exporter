@@ -22,12 +22,12 @@ jobs:
           version: latest
           args: release --config ./.goreleaser.ci.yml --rm-dist --snapshot
       - name: Copy .ini files
-        run: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64
+        run: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64_v1
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: dnsbl_exporter
-          path: dist/dnsbl_exporter_linux_amd64
+          path: dist/dnsbl_exporter_linux_amd64_v1
 
   integration:
     runs-on: ubuntu-latest
