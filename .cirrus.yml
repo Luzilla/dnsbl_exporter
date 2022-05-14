@@ -4,7 +4,7 @@ freebsd_instance:
 
 task:
   provision_script:
-    - pkg install -y go git
+    - pkg install -y lang/go git-lite
   script:
     - uname -a
     - go mod tidy
