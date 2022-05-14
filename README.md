@@ -39,10 +39,20 @@ $ dnsbl-exporter -h
 
  Go to http://127.0.0.1:9211/ in your browser.
 
+#### Quering
+
+The individual configured servers and their status are represented by a **gauge**:
+
+```sh
+luzilla_rbls_ips_blacklisted{hostname="mail.gmx.net",ip="212.227.17.168",rbl="ix.dnsbl.manitu.net"} 0
+```
+
+This represent the server's hostname and the DNSBL in question. `0` for unlisted and `1` for listed. Requests to the DNSBL happen in real-time and are not cached. Take this into account and use accordingly.
+
 ### Caveat
 
 In order to use this, a _proper_ DNS resolver is needed. Proper means: not Google, not Cloudflare, OpenDNS, etc..
-Instead use a resolver like Unbound.
+Instead use a resolver like [Unbound](https://github.com/NLnetLabs/unbound).
 
 To test on OSX, follow these steps:
 
