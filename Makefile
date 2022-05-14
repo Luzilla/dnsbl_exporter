@@ -2,7 +2,7 @@ GO_VERSION:=0.16
 
 .PHONY: build
 build:
-	goreleaser r --snapshot --rm-dist
+	goreleaser build --snapshot --single-target --rm-dist
 
 .PHONY: test
 test:
