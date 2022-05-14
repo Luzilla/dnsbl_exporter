@@ -76,6 +76,7 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 	// this should be a map of blacklist and a counter
 	listed := 0
 
+	// iterate over hosts -> resolve to ip, check
 	for _, host := range hosts {
 
 		log.Debugln("Checking ...", host)
