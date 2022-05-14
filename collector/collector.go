@@ -3,6 +3,8 @@ package collector
 import (
 	"sync"
 
+	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
+	x "github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
@@ -83,7 +85,7 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 
 		log.Debugln("Checking ...", host)
 
-		rbl := NewRbl(c.resolver)
+		rbl := NewRbl(dns.New(new(x.Client), c.resolver))
 		rbl.Update(host, c.rbls)
 
 		for _, result := range rbl.Results {
