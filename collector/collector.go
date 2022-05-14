@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"sync"
+
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
@@ -73,8 +75,8 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 		float64(len(c.rbls)),
 	)
 
-	// this should be a map of blacklist and a counter
-	listed := 0
+	// this should be a map of blacklist and a counter (for listings)
+	var listed sync.Map
 
 	// iterate over hosts -> resolve to ip, check
 	for _, host := range hosts {
@@ -92,9 +94,10 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 
 			metricValue := 0
 
+			val, _ := listed.LoadOrStore(result.Rbl, 0)
 			if result.Listed {
 				metricValue = 1
-				listed = +1
+				listed.Store(result.Rbl, val.(int)+1)
 			}
 
 			labelValues := []string{result.Rbl, result.Address, host}
@@ -117,10 +120,14 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	ch <- prometheus.MustNewConstMetric(
-		c.listedMetric,
-		prometheus.GaugeValue,
-		float64(listed),
-		[]string{"foo"}...,
-	)
+	for _, rbl := range c.rbls {
+		val, _ := listed.LoadOrStore(rbl, 0)
+		ch <- prometheus.MustNewConstMetric(
+			c.listedMetric,
+			prometheus.GaugeValue,
+			float64(val.(int)),
+			[]string{rbl}...,
+		)
+	}
+
 }
