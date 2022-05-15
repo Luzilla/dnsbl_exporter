@@ -4,6 +4,10 @@ GO_VERSION:=1.16
 build:
 	goreleaser build --snapshot --single-target --rm-dist
 
+.PHONY: snapshot
+snapshot:
+	goreleaser build --snapshot --rm-dist
+
 .PHONY: test
 test:
 	docker run \
