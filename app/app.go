@@ -30,24 +30,28 @@ func NewApp(name string, version string) DNSBLApp {
 	app.Version = version
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "config.dns-resolver",
-			Value: "127.0.0.1:53",
-			Usage: "IP address[:port] of the resolver to use.",
+			Name:   "config.dns-resolver",
+			Value:  "127.0.0.1:53",
+			Usage:  "IP address[:port] of the resolver to use.",
+			EnvVar: "DNSBL_EXP_RESOLVER",
 		},
 		cli.StringFlag{
-			Name:  "config.rbls",
-			Value: "./rbls.ini",
-			Usage: "Configuration file which contains RBLs",
+			Name:   "config.rbls",
+			Value:  "./rbls.ini",
+			Usage:  "Configuration file which contains RBLs",
+			EnvVar: "DNSBL_EXP_RBLS",
 		},
 		cli.StringFlag{
-			Name:  "config.targets",
-			Value: "./targets.ini",
-			Usage: "Configuration file which contains the targets to check.",
+			Name:   "config.targets",
+			Value:  "./targets.ini",
+			Usage:  "Configuration file which contains the targets to check.",
+			EnvVar: "DNSBL_EXP_TARGETS",
 		},
 		cli.StringFlag{
-			Name:  "web.listen-address",
-			Value: ":9211",
-			Usage: "Address to listen on for web interface and telemetry.",
+			Name:   "web.listen-address",
+			Value:  ":9211",
+			Usage:  "Address to listen on for web interface and telemetry.",
+			EnvVar: "DNSBL_EXP_LISTEN",
 		},
 		cli.StringFlag{
 			Name:  "web.telemetry-path",
