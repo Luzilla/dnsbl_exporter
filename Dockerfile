@@ -1,4 +1,4 @@
-FROM alpine:3
+FROM debian:stable-slim
 
 ENV DNSBL_EXP_RESOLVER=ubound:53
 ENV DNSBL_EXP_RBLS=/etc/dnsbl-exporter/rbls.ini
