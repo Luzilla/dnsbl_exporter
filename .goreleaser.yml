@@ -4,7 +4,6 @@ project_name: dnsbl_exporter
 before:
   hooks:
     - go mod tidy
-    - go generate ./...
 builds:
 - main: ./dnsbl_exporter.go
   binary: dnsbl-exporter
@@ -33,6 +32,7 @@ dockers:
   - rbls.ini
   - targets.ini
   goarch: amd64
+  goos: linux
 - image_templates:
   - 'ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-arm64'
   dockerfile: Dockerfile
@@ -49,6 +49,7 @@ dockers:
   - rbls.ini
   - targets.ini
   goarch: arm64
+  goos: linux
 docker_manifests:
 - name_template: ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}
   image_templates:
@@ -57,12 +58,6 @@ docker_manifests:
 archives:
 - files:
   - none*
-  replacements:
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
-    386: i386
-    amd64: x86_64
 checksum:
   name_template: 'checksums.txt'
 snapshot:

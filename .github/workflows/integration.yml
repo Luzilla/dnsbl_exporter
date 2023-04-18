@@ -20,7 +20,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v2
         with:
           version: latest
-          args: release --config ./.goreleaser.ci.yml --rm-dist --snapshot
+          args: release --config ./.goreleaser.ci.yml --clean --snapshot
       - name: Copy .ini files
         run: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64_v1
       - name: Upload artifact
