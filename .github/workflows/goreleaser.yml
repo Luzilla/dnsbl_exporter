@@ -1,5 +1,5 @@
 ---
-name: goreleaser
+name: release
 
 on:
   push:
@@ -10,19 +10,19 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      -
-        name: Set up Go
-        uses: actions/setup-go@v2
+      - uses: actions/setup-go@v2
         with:
           go-version: 1.16
-      -
-        name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: goreleaser/goreleaser-action@v2
         with:
           version: latest
           args: release --rm-dist

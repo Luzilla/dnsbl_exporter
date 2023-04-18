@@ -3,6 +3,9 @@ package collector
 import (
 	"sync"
 
+	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
+	"github.com/Luzilla/dnsbl_exporter/pkg/rbl"
+	x "github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
@@ -83,10 +86,10 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 
 		log.Debugln("Checking ...", host)
 
-		rbl := NewRbl(c.resolver)
-		rbl.Update(host, c.rbls)
+		r := rbl.New(dns.New(new(x.Client), c.resolver))
+		r.Update(host, c.rbls)
 
-		for _, result := range rbl.Results {
+		for _, result := range r.Results {
 			// this is an "error" from the RBL
 			if result.Error {
 				log.Errorln(result.Text)

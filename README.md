@@ -39,7 +39,43 @@ $ dnsbl-exporter -h
 
  Go to http://127.0.0.1:9211/ in your browser.
 
-#### Quering
+#### Container
+
+Docker/OCI images are available in the [container registry](https://github.com/orgs/Luzilla/packages?repo_name=dnsbl_exporter):
+
+```sh
+$ docker pull ghcr.io/luzilla/dnsbl_exporter:vX.Y.Z
+...
+```
+
+Please note: `latest` is not provided.
+
+The images expect `target.ini` and `rbls.ini` in the following location:
+
+```sh
+/etc/dnsbl-exporter
+```
+
+Either start the container and supply the contents, or build your own image:
+
+```sh
+docker run \
+    --rm \
+    -e DNSBL_EXP_RESOLVER=your.resolver:53 \
+    -p 9211:9211 \
+    -v ./conf:/etc/dnsbl-exporter \
+    ghcr.io/luzilla/dnsbl_exporter:vA.B.C
+```
+
+```docker
+FROM ghcr.io/luzilla/dnsbl_exporter:vA.B.C
+
+ADD my-target.ini /etc/dnsbl-exporter/target.ini
+ADD my-rbls.ini /etc/dnsbl-exporter/rbls.ini
+```
+
+
+#### Querying
 
 The individual configured servers and their status are represented by a **gauge**:
 
