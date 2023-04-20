@@ -4,7 +4,6 @@ project_name: dnsbl_exporter
 before:
   hooks:
     - go mod tidy
-    - go generate ./...
 builds:
 - main: ./dnsbl_exporter.go
   binary: dnsbl-exporter
@@ -16,10 +15,6 @@ builds:
 archives:
 - files:
   - none*
-  replacements:
-    linux: Linux
-    386: i386
-    amd64: x86_64
 checksum:
   name_template: 'checksums.txt'
 snapshot:
