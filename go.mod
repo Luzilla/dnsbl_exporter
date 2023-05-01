@@ -8,7 +8,7 @@ require (
 	github.com/Luzilla/godnsbl v1.0.0
 	github.com/miekg/dns v1.1.53
 	github.com/sirupsen/logrus v1.9.0
-	github.com/urfave/cli v1.22.12
+	github.com/urfave/cli v1.22.13
 	gopkg.in/ini.v1 v1.67.0
 )
 
