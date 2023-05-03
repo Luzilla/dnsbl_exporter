@@ -6,7 +6,7 @@ require github.com/prometheus/client_golang v1.15.0
 
 require (
 	github.com/Luzilla/godnsbl v1.0.0
-	github.com/miekg/dns v1.1.53
+	github.com/miekg/dns v1.1.54
 	github.com/sirupsen/logrus v1.9.0
 	github.com/urfave/cli v1.22.13
 	gopkg.in/ini.v1 v1.67.0
