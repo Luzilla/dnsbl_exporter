@@ -2,6 +2,7 @@ package collector
 
 import (
 	"sync"
+	"time"
 
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/Luzilla/dnsbl_exporter/pkg/rbl"
@@ -19,6 +20,7 @@ type RblCollector struct {
 	blacklistedMetric *prometheus.Desc
 	errorsMetrics     *prometheus.Desc
 	listedMetric      *prometheus.Desc
+	durationMetric    *prometheus.Desc
 	rbls              []string
 	resolver          string
 	targets           []string
@@ -55,6 +57,12 @@ func NewRblCollector(rbls []string, targets []string, resolver string) *RblColle
 			[]string{"rbl"},
 			nil,
 		),
+		durationMetric: prometheus.NewDesc(
+			buildFQName("duration"),
+			"The scrape's duration (in seconds)",
+			nil,
+			nil,
+		),
 		rbls:     rbls,
 		resolver: resolver,
 		targets:  targets,
@@ -77,6 +85,8 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 		prometheus.GaugeValue,
 		float64(len(c.rbls)),
 	)
+
+	start := time.Now()
 
 	// this should be a map of blacklist and a counter (for listings)
 	var listed sync.Map
@@ -132,5 +142,11 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 			[]string{rbl}...,
 		)
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.durationMetric,
+		prometheus.GaugeValue,
+		time.Since(start).Seconds(),
+	)
 
 }

@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Luzilla/dnsbl_exporter/collector"
 	"github.com/Luzilla/dnsbl_exporter/config"
+	"github.com/Luzilla/dnsbl_exporter/internal/prober"
+	"github.com/Luzilla/dnsbl_exporter/internal/setup"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli"
@@ -118,12 +119,12 @@ func (app *DNSBLApp) Bootstrap() {
 		rbls := config.GetRbls(cfgRbls)
 		targets := config.GetTargets(cfgTargets)
 
-		registry := createRegistry()
+		registry := setup.CreateRegistry()
 
-		collector := createCollector(rbls, targets, ctx.String("config.dns-resolver"))
+		collector := setup.CreateCollector(rbls, targets, ctx.String("config.dns-resolver"))
 		registry.MustRegister(collector)
 
-		registryExporter := createRegistry()
+		registryExporter := setup.CreateRegistry()
 
 		if ctx.Bool("web.include-exporter-metrics") {
 			log.Infoln("Exposing exporter metrics")
@@ -147,6 +148,12 @@ func (app *DNSBLApp) Bootstrap() {
 
 		http.Handle(ctx.String("web.telemetry-path"), handler)
 
+		pHandler := prober.ProberHandler{
+			Resolver: ctx.String("config.dns-resolver"),
+			Rbls:     rbls,
+		}
+		http.Handle("/prober", pHandler)
+
 		log.Infoln("Starting on: ", ctx.String("web.listen-address"))
 		err = http.ListenAndServe(ctx.String("web.listen-address"), nil)
 		if err != nil {
@@ -159,12 +166,4 @@ func (app *DNSBLApp) Bootstrap() {
 
 func (app *DNSBLApp) Run(args []string) error {
 	return app.App.Run(args)
-}
-
-func createCollector(rbls []string, targets []string, resolver string) *collector.RblCollector {
-	return collector.NewRblCollector(rbls, targets, resolver)
-}
-
-func createRegistry() *prometheus.Registry {
-	return prometheus.NewRegistry()
 }
