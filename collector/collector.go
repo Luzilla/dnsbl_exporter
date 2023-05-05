@@ -26,7 +26,7 @@ type RblCollector struct {
 	targets           []string
 }
 
-func buildFQName(metric string) string {
+func BuildFQName(metric string) string {
 	return prometheus.BuildFQName(namespace, subsystem, metric)
 }
 
@@ -34,31 +34,31 @@ func buildFQName(metric string) string {
 func NewRblCollector(rbls []string, targets []string, resolver string) *RblCollector {
 	return &RblCollector{
 		configuredMetric: prometheus.NewDesc(
-			buildFQName("used"),
+			BuildFQName("used"),
 			"The number of RBLs to check IPs against (configured via rbls.ini)",
 			nil,
 			nil,
 		),
 		blacklistedMetric: prometheus.NewDesc(
-			buildFQName("ips_blacklisted"),
+			BuildFQName("ips_blacklisted"),
 			"Blacklisted IPs",
 			[]string{"rbl", "ip", "hostname"},
 			nil,
 		),
 		errorsMetrics: prometheus.NewDesc(
-			buildFQName("errors"),
+			BuildFQName("errors"),
 			"The number of errors which occurred testing the RBLs",
 			[]string{"rbl"},
 			nil,
 		),
 		listedMetric: prometheus.NewDesc(
-			buildFQName("listed"),
+			BuildFQName("listed"),
 			"The number of listings in RBLs (this is bad)",
 			[]string{"rbl"},
 			nil,
 		),
 		durationMetric: prometheus.NewDesc(
-			buildFQName("duration"),
+			BuildFQName("duration"),
 			"The scrape's duration (in seconds)",
 			nil,
 			nil,
