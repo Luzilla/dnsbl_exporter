@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -14,8 +15,7 @@ import (
 	"github.com/Luzilla/dnsbl_exporter/internal/setup"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/urfave/cli/v2"
-
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 type DNSBLApp struct {
@@ -104,32 +104,43 @@ func NewApp(name string, version string) DNSBLApp {
 func (a *DNSBLApp) Bootstrap() {
 	a.App.Action = func(ctx *cli.Context) error {
 		// setup logging
-		switch ctx.String("log.output") {
-		case "stdout":
-			log.SetOutput(os.Stdout)
-		case "stderr":
-			log.SetOutput(os.Stderr)
-		}
+		fmt.Println("VERSION: " + appVersion)
+		handler := &slog.HandlerOptions{}
+		var writer io.Writer
+
 		if ctx.Bool("log.debug") {
-			log.SetLevel(log.DebugLevel)
+			handler.Level = slog.LevelDebug
 		}
 
-		cfgRbls, err := config.LoadFile(ctx.String("config.rbls"))
+		switch ctx.String("log.output") {
+		case "stdout":
+			writer = os.Stdout
+		case "stderr":
+			writer = os.Stderr
+		}
+
+		log := slog.New(handler.NewTextHandler(writer))
+
+		c := config.Config{
+			Logger: log.With("area", "config"),
+		}
+
+		cfgRbls, err := c.LoadFile(ctx.String("config.rbls"))
 		if err != nil {
 			return err
 		}
 
-		err = config.ValidateConfig(cfgRbls, "rbl")
+		err = c.ValidateConfig(cfgRbls, "rbl")
 		if err != nil {
 			return fmt.Errorf("unable to load the rbls from the config: %w", err)
 		}
 
-		cfgTargets, err := config.LoadFile(ctx.String("config.targets"))
+		cfgTargets, err := c.LoadFile(ctx.String("config.targets"))
 		if err != nil {
 			return err
 		}
 
-		err = config.ValidateConfig(cfgTargets, "targets")
+		err = c.ValidateConfig(cfgTargets, "targets")
 		if err != nil {
 			if !errors.Is(err, config.ErrNoServerEntries) && !errors.Is(err, config.ErrNoSuchSection) {
 				return err
@@ -145,18 +156,18 @@ func (a *DNSBLApp) Bootstrap() {
 
 		http.HandleFunc("/", iHandler.Handler)
 
-		rbls := config.GetRbls(cfgRbls)
-		targets := config.GetTargets(cfgTargets)
+		rbls := c.GetRbls(cfgRbls)
+		targets := c.GetTargets(cfgTargets)
 
 		registry := setup.CreateRegistry()
 
-		rblCollector := setup.CreateCollector(rbls, targets, resolver)
+		rblCollector := setup.CreateCollector(rbls, targets, resolver, log.With("area", "metrics"))
 		registry.MustRegister(rblCollector)
 
 		registryExporter := setup.CreateRegistry()
 
 		if ctx.Bool("web.include-exporter-metrics") {
-			log.Infoln("Exposing exporter metrics")
+			log.Info("Exposing exporter metrics")
 
 			registryExporter.MustRegister(
 				prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
@@ -174,10 +185,11 @@ func (a *DNSBLApp) Bootstrap() {
 		pHandler := prober.ProberHandler{
 			Resolver: resolver,
 			Rbls:     rbls,
+			Logger:   log.With("area", "prober"),
 		}
 		http.Handle("/prober", pHandler)
 
-		log.Infoln("Starting on: ", ctx.String("web.listen-address"))
+		log.Info("Starting on: " + ctx.String("web.listen-address"))
 		err = http.ListenAndServe(ctx.String("web.listen-address"), nil)
 		if err != nil {
 			return err

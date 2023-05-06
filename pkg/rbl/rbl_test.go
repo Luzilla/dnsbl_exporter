@@ -7,16 +7,15 @@ import (
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/Luzilla/dnsbl_exporter/pkg/rbl"
 	x "github.com/miekg/dns"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 func TestUpdate(t *testing.T) {
-	log.SetLevel(log.DebugLevel)
-	log.SetOutput(os.Stdout)
+	logger := slog.New(slog.NewTextHandler(os.Stderr))
 
-	d := dns.New(new(x.Client), "0.0.0.0:53")
+	d := dns.New(new(x.Client), "0.0.0.0:53", logger)
 
-	r := rbl.New(d)
+	r := rbl.New(d, logger)
 	r.Update("this.is.not.an.ip", []string{"cbl.abuseat.org"})
 
 	if len(r.Results) > 0 {

@@ -1,10 +1,12 @@
 package config_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/Luzilla/dnsbl_exporter/config"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/slog"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -35,7 +37,10 @@ func TestLoadConfig(t *testing.T) {
 	for _, tt := range tests {
 		tc := tt
 		t.Run(tc.file, func(t *testing.T) {
-			_, err := config.LoadFile(tc.file)
+			c := &config.Config{
+				Logger: slog.New(slog.NewTextHandler(os.Stderr)),
+			}
+			_, err := c.LoadFile(tc.file)
 			if tc.success {
 				assert.NoError(t, err, "tc: "+tc.file)
 			} else {
@@ -46,10 +51,14 @@ func TestLoadConfig(t *testing.T) {
 }
 
 func TestValidateConfig(t *testing.T) {
-	cfg, err := config.LoadFile("./../targets.ini")
+	c := &config.Config{
+		Logger: slog.New(slog.NewTextHandler(os.Stderr)),
+	}
+
+	cfg, err := c.LoadFile("./../targets.ini")
 	assert.NoError(t, err)
 
 	// ensure we return an error when the config section does not exist
-	err = config.ValidateConfig(cfg, "blah")
+	err = c.ValidateConfig(cfg, "blah")
 	assert.Error(t, err)
 }

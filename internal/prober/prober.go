@@ -5,15 +5,18 @@ import (
 
 	"github.com/Luzilla/dnsbl_exporter/internal/setup"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/exp/slog"
 )
 
 type ProberHandler struct {
 	Resolver string
 	Rbls     []string
+	Logger   *slog.Logger
 }
 
 func (p ProberHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !r.URL.Query().Has("target") {
+		p.Logger.Error("missing ?target parameter")
 		http.Error(w, "missing ?target parameter", http.StatusBadRequest)
 		return
 	}
@@ -22,7 +25,7 @@ func (p ProberHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	targets = append(targets, r.URL.Query().Get("target"))
 
 	registry := setup.CreateRegistry()
-	collector := setup.CreateCollector(p.Rbls, targets, p.Resolver)
+	collector := setup.CreateCollector(p.Rbls, targets, p.Resolver, p.Logger)
 	registry.MustRegister(collector)
 
 	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{
