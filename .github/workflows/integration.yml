@@ -42,7 +42,7 @@ jobs:
           - 5053:5053/udp
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: dnsbl_exporter
       - name: Allow running exporter
