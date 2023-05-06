@@ -20,6 +20,7 @@ type RblCollector struct {
 	blacklistedMetric *prometheus.Desc
 	errorsMetrics     *prometheus.Desc
 	listedMetric      *prometheus.Desc
+	targetsMetric     *prometheus.Desc
 	durationMetric    *prometheus.Desc
 	rbls              []string
 	resolver          string
@@ -57,6 +58,12 @@ func NewRblCollector(rbls []string, targets []string, resolver string) *RblColle
 			[]string{"rbl"},
 			nil,
 		),
+		targetsMetric: prometheus.NewDesc(
+			BuildFQName("targets"),
+			"The number of targets that are being probed (configured via targets.ini or ?target=)",
+			nil,
+			nil,
+		),
 		durationMetric: prometheus.NewDesc(
 			BuildFQName("duration"),
 			"The scrape's duration (in seconds)",
@@ -84,6 +91,12 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 		c.configuredMetric,
 		prometheus.GaugeValue,
 		float64(len(c.rbls)),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.targetsMetric,
+		prometheus.GaugeValue,
+		float64(len(hosts)),
 	)
 
 	start := time.Now()
