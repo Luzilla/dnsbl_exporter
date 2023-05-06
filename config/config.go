@@ -3,19 +3,26 @@ package config
 import (
 	"errors"
 
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 	"gopkg.in/ini.v1"
 )
 
+var ErrNoSuchSection = errors.New("section does not exist")
+var ErrNoServerEntries = errors.New("please add a few server= entries to your .ini")
+
+type Config struct {
+	Logger *slog.Logger
+}
+
 // ValidateConfig validate the supplied configuration, e.g. check if we have "server="
-func ValidateConfig(cfg *ini.File, section string) error {
+func (c *Config) ValidateConfig(cfg *ini.File, section string) error {
 	configSection, err := cfg.GetSection(section)
 	if err != nil {
-		return errors.New("Section does not exists")
+		return ErrNoSuchSection
 	}
 
 	if !configSection.HasKey("server") {
-		return errors.New("Please add a few server= entries to your rbls.ini")
+		return ErrNoServerEntries
 	}
 
 	return nil
@@ -31,25 +38,20 @@ func loadConfig(path string) (*ini.File, error) {
 }
 
 // GetRbls returns all rbls from the config
-func GetRbls(cfg *ini.File) []string {
+func (c *Config) GetRbls(cfg *ini.File) []string {
 	return cfg.Section("rbl").Key("server").ValueWithShadows()
 }
 
 // GetTargets returns all targets from the config
-func GetTargets(cfg *ini.File) []string {
+func (c *Config) GetTargets(cfg *ini.File) []string {
 	return cfg.Section("targets").Key("server").ValueWithShadows()
 }
 
 // LoadFile ...
-func LoadFile(path string, section string) (*ini.File, error) {
-	log.Debugln("Loading configuration...", path)
+func (c *Config) LoadFile(path string) (*ini.File, error) {
+	c.Logger.Debug("Loading configuration file: " + path)
 
 	cfg, err := loadConfig(path)
-	if err != nil {
-		return nil, err
-	}
-
-	err = ValidateConfig(cfg, section)
 	if err != nil {
 		return nil, err
 	}

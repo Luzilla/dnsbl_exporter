@@ -1,19 +1,15 @@
-GO_VERSION:=1.16
-
 .PHONY: build
 build:
-	goreleaser build --snapshot --single-target --rm-dist
+	goreleaser build --snapshot --single-target --clean
+
+.PHONY: run-dev
+run-dev:
+	go run dnsbl_exporter.go --log.debug
 
 .PHONY: snapshot
 snapshot:
-	goreleaser build --snapshot --rm-dist
+	goreleaser build --snapshot --clean
 
 .PHONY: test
 test:
-	docker run \
-		-it \
-		--rm \
-		-v $(CURDIR):/src/github.com/Luzilla/dnsbl_exporter \
-		-w /src/github.com/Luzilla/dnsbl_exporter \
-		golang:$(GO_VERSION) \
-		sh -c "go mod download && go test ./..."
+	act "pull_request" -j test

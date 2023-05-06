@@ -1,53 +1,64 @@
-package config
+package config_test
 
 import (
-	"errors"
+	"os"
 	"testing"
+
+	"github.com/Luzilla/dnsbl_exporter/config"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/slog"
 )
 
 func TestLoadConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		File  string
-		Key   string
-		Error error
+		file    string
+		key     string
+		success bool
 	}{
 		{
-			File:  "./../targets.ini",
-			Key:   "targets",
-			Error: nil,
+			file:    "./../targets.ini",
+			key:     "targets",
+			success: true,
 		},
 		{
-			File:  "./../rbls.ini",
-			Key:   "rbl",
-			Error: nil,
+			file:    "./../rbls.ini",
+			key:     "rbl",
+			success: true,
 		},
 		{
-			File:  "./does-not-exists.ini",
-			Key:   "foo",
-			Error: errors.New("Section does not exists"),
-		},
-		{
-			File:  "./../targets.ini",
-			Key:   "blah",
-			Error: errors.New("Section does not exists"),
+			file:    "./does-not-exists.ini",
+			key:     "foo",
+			success: false,
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.File, func(t *testing.T) {
-			_, err := LoadFile(tt.File, tt.Key)
-			if tt.Error == nil {
-				if err != nil {
-					t.Errorf("Could not load '%s' with key '%s': %s", tt.File, tt.Key, err)
-				}
+		tc := tt
+		t.Run(tc.file, func(t *testing.T) {
+			c := &config.Config{
+				Logger: slog.New(slog.NewTextHandler(os.Stderr)),
+			}
+			_, err := c.LoadFile(tc.file)
+			if tc.success {
+				assert.NoError(t, err, "tc: "+tc.file)
 			} else {
-				if err == nil {
-					t.Errorf("Expected error for: '%s', but got none.", tt.File)
-				}
+				assert.Error(t, err, "tc: "+tc.file)
 			}
 		})
 	}
+}
+
+func TestValidateConfig(t *testing.T) {
+	c := &config.Config{
+		Logger: slog.New(slog.NewTextHandler(os.Stderr)),
+	}
+
+	cfg, err := c.LoadFile("./../targets.ini")
+	assert.NoError(t, err)
+
+	// ensure we return an error when the config section does not exist
+	err = c.ValidateConfig(cfg, "blah")
+	assert.Error(t, err)
 }

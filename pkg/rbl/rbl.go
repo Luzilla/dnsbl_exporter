@@ -7,7 +7,7 @@ import (
 
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/Luzilla/godnsbl"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 // Rblresult extends godnsbl and adds RBL name
@@ -25,13 +25,15 @@ type Rblresult struct {
 type Rbl struct {
 	Results []Rblresult
 	util    *dns.DNSUtil
+	logger  *slog.Logger
 }
 
 // NewRbl ... factory
-func New(util *dns.DNSUtil) Rbl {
+func New(util *dns.DNSUtil, logger *slog.Logger) Rbl {
 	var results []Rblresult
 
 	rbl := Rbl{
+		logger:  logger,
 		util:    util,
 		Results: results,
 	}
@@ -49,7 +51,7 @@ func (rbl *Rbl) Update(ip string, rbls []string) {
 		go func(source string, ip string) {
 			defer wg.Done()
 
-			log.Debugf("Working blacklist %s (ip: %s)", source, ip)
+			rbl.logger.Debug("Next up", slog.String("rbl", source), slog.String("ip", ip))
 
 			results := rbl.lookup(source, ip)
 			if len(results) == 0 {
@@ -66,7 +68,7 @@ func (rbl *Rbl) Update(ip string, rbls []string) {
 func (rbl *Rbl) query(ip string, blacklist string, result *Rblresult) {
 	result.Listed = false
 
-	log.Debugf("Trying to query blacklist '%s' for %s", blacklist, ip)
+	rbl.logger.Debug("About to query RBL", slog.String("rbl", blacklist), slog.String("ip", ip))
 
 	lookup := fmt.Sprintf("%s.%s", ip, blacklist)
 
@@ -94,13 +96,13 @@ func (rbl *Rbl) lookup(rblList string, targetHost string) []Rblresult {
 	if addr == nil {
 		ipsA, err := rbl.util.GetARecords(targetHost)
 		if err != nil {
-			log.Errorln(err)
+			rbl.logger.Error(err.Error())
 			return rbl.Results
 		}
 
 		ips = ipsA
 	} else {
-		log.Infoln("We had an ip", addr.String())
+		rbl.logger.Info("We had an ip", slog.String("ip", addr.String()))
 		ips = append(ips, addr.String())
 	}
 
@@ -113,7 +115,7 @@ func (rbl *Rbl) lookup(rblList string, targetHost string) []Rblresult {
 		// attempt to "validate" the IP
 		ValidIPAddress := net.ParseIP(ip)
 		if ValidIPAddress == nil {
-			log.Errorf("Unable to parse IP: %s", ip)
+			rbl.logger.Error("Unable to parse IP", slog.String("ip", ip))
 			continue
 		}
 

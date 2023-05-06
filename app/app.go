@@ -1,132 +1,173 @@
 package app
 
 import (
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"strings"
 
-	"github.com/Luzilla/dnsbl_exporter/collector"
 	"github.com/Luzilla/dnsbl_exporter/config"
+	"github.com/Luzilla/dnsbl_exporter/internal/index"
+	"github.com/Luzilla/dnsbl_exporter/internal/metrics"
+	"github.com/Luzilla/dnsbl_exporter/internal/prober"
+	"github.com/Luzilla/dnsbl_exporter/internal/setup"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/urfave/cli"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"golang.org/x/exp/slog"
 )
 
 type DNSBLApp struct {
 	App *cli.App
 }
 
+var (
+	appName, appVersion, appPath string
+	resolver                     string
+)
+
 // NewApp ...
 func NewApp(name string, version string) DNSBLApp {
+	appName = name
+	appVersion = version
 
-	cli.VersionFlag = cli.BoolFlag{
-		Name:  "version, V",
-		Usage: "Print the version information.",
-	}
-
-	app := cli.NewApp()
-	app.Name = name
-	app.Version = version
-	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:   "config.dns-resolver",
-			Value:  "127.0.0.1:53",
-			Usage:  "IP address[:port] of the resolver to use.",
-			EnvVar: "DNSBL_EXP_RESOLVER",
+	a := cli.NewApp()
+	a.Name = appName
+	a.Version = appVersion
+	a.Flags = []cli.Flag{
+		&cli.StringFlag{
+			Name:        "config.dns-resolver",
+			Value:       "127.0.0.1:53",
+			Usage:       "IP address[:port] of the resolver to use.",
+			EnvVars:     []string{"DNSBL_EXP_RESOLVER"},
+			Destination: &resolver,
 		},
-		cli.StringFlag{
-			Name:   "config.rbls",
-			Value:  "./rbls.ini",
-			Usage:  "Configuration file which contains RBLs",
-			EnvVar: "DNSBL_EXP_RBLS",
+		&cli.StringFlag{
+			Name:    "config.rbls",
+			Value:   "./rbls.ini",
+			Usage:   "Configuration file which contains RBLs",
+			EnvVars: []string{"DNSBL_EXP_RBLS"},
 		},
-		cli.StringFlag{
-			Name:   "config.targets",
-			Value:  "./targets.ini",
-			Usage:  "Configuration file which contains the targets to check.",
-			EnvVar: "DNSBL_EXP_TARGETS",
+		&cli.StringFlag{
+			Name:    "config.targets",
+			Value:   "./targets.ini",
+			Usage:   "Configuration file which contains the targets to check.",
+			EnvVars: []string{"DNSBL_EXP_TARGETS"},
 		},
-		cli.StringFlag{
-			Name:   "web.listen-address",
-			Value:  ":9211",
-			Usage:  "Address to listen on for web interface and telemetry.",
-			EnvVar: "DNSBL_EXP_LISTEN",
+		&cli.StringFlag{
+			Name:    "web.listen-address",
+			Value:   ":9211",
+			Usage:   "Address to listen on for web interface and telemetry.",
+			EnvVars: []string{"DNSBL_EXP_LISTEN"},
 		},
-		cli.StringFlag{
-			Name:  "web.telemetry-path",
-			Value: "/metrics",
-			Usage: "Path under which to expose metrics.",
+		&cli.StringFlag{
+			Name:        "web.telemetry-path",
+			Value:       "/metrics",
+			Usage:       "Path under which to expose metrics.",
+			Destination: &appPath,
+			Action: func(cCtx *cli.Context, v string) error {
+				if !strings.HasPrefix(v, "/") {
+					return cli.Exit("Missing / to prefix the path: --web.telemetry-path", 2)
+				}
+				return nil
+			},
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "web.include-exporter-metrics",
 			Usage: "Include metrics about the exporter itself (promhttp_*, process_*, go_*).",
+			Value: false,
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "log.debug",
 			Usage: "Enable more output in the logs, otherwise INFO.",
+			Value: false,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "log.output",
 			Value: "stdout",
 			Usage: "Destination of our logs: stdout, stderr",
+			Action: func(cCtx *cli.Context, v string) error {
+				if v != "stdout" && v != "stderr" {
+					return cli.Exit("We currently support only stdout and stderr: --log.output", 2)
+				}
+				return nil
+			},
 		},
 	}
 
 	return DNSBLApp{
-		App: app,
+		App: a,
 	}
 }
 
-func (app *DNSBLApp) Bootstrap() {
-	app.App.Action = func(ctx *cli.Context) error {
+func (a *DNSBLApp) Bootstrap() {
+	a.App.Action = func(ctx *cli.Context) error {
 		// setup logging
+		fmt.Println("VERSION: " + appVersion)
+		handler := &slog.HandlerOptions{}
+		var writer io.Writer
+
+		if ctx.Bool("log.debug") {
+			handler.Level = slog.LevelDebug
+		}
+
 		switch ctx.String("log.output") {
 		case "stdout":
-			log.SetOutput(os.Stdout)
+			writer = os.Stdout
 		case "stderr":
-			log.SetOutput(os.Stderr)
-		default:
-			cli.ShowAppHelp(ctx)
-			return cli.NewExitError("We currently support only stdout and stderr: --log.output", 2)
-		}
-		if ctx.Bool("log.debug") {
-			log.SetLevel(log.DebugLevel)
+			writer = os.Stderr
 		}
 
-		cfgRbls, err := config.LoadFile(ctx.String("config.rbls"), "rbl")
+		log := slog.New(handler.NewTextHandler(writer))
+
+		c := config.Config{
+			Logger: log.With("area", "config"),
+		}
+
+		cfgRbls, err := c.LoadFile(ctx.String("config.rbls"))
 		if err != nil {
 			return err
 		}
 
-		cfgTargets, err := config.LoadFile(ctx.String("config.targets"), "targets")
+		err = c.ValidateConfig(cfgRbls, "rbl")
+		if err != nil {
+			return fmt.Errorf("unable to load the rbls from the config: %w", err)
+		}
+
+		cfgTargets, err := c.LoadFile(ctx.String("config.targets"))
 		if err != nil {
 			return err
 		}
 
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(`<html>
-				<head><title>` + app.App.Name + `</title></head>
-				<body>
-				<h1>` + app.App.Name + ` @ ` + app.App.Version + `</h1>
-				<p><a href="` + ctx.String("web.telemetry-path") + `">Metrics</a></p>
-				<p><a href="https://github.com/Luzilla/dnsbl_exporter">Code on Github</a></p>
-				</body>
-				</html>`))
-		})
+		err = c.ValidateConfig(cfgTargets, "targets")
+		if err != nil {
+			if !errors.Is(err, config.ErrNoServerEntries) && !errors.Is(err, config.ErrNoSuchSection) {
+				return err
+			}
+			log.Info("starting exporter without targets — check the /prober endpoint or correct the .ini file")
+		}
 
-		rbls := config.GetRbls(cfgRbls)
-		targets := config.GetTargets(cfgTargets)
+		iHandler := index.IndexHandler{
+			Name:    appName,
+			Version: appVersion,
+			Path:    appPath,
+		}
 
-		registry := createRegistry()
+		http.HandleFunc("/", iHandler.Handler)
 
-		collector := createCollector(rbls, targets, ctx.String("config.dns-resolver"))
-		registry.MustRegister(collector)
+		rbls := c.GetRbls(cfgRbls)
+		targets := c.GetTargets(cfgTargets)
 
-		registryExporter := createRegistry()
+		registry := setup.CreateRegistry()
+
+		rblCollector := setup.CreateCollector(rbls, targets, resolver, log.With("area", "metrics"))
+		registry.MustRegister(rblCollector)
+
+		registryExporter := setup.CreateRegistry()
 
 		if ctx.Bool("web.include-exporter-metrics") {
-			log.Infoln("Exposing exporter metrics")
+			log.Info("Exposing exporter metrics")
 
 			registryExporter.MustRegister(
 				prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
@@ -134,20 +175,21 @@ func (app *DNSBLApp) Bootstrap() {
 			)
 		}
 
-		handler := promhttp.HandlerFor(
-			prometheus.Gatherers{
-				registry,
-				registryExporter,
-			},
-			promhttp.HandlerOpts{
-				ErrorHandling: promhttp.ContinueOnError,
-				Registry:      registry,
-			},
-		)
+		mHandler := metrics.MetricsHandler{
+			Registry:         registry,
+			RegistryExporter: registryExporter,
+		}
 
-		http.Handle(ctx.String("web.telemetry-path"), handler)
+		http.Handle(ctx.String("web.telemetry-path"), mHandler.Handler())
 
-		log.Infoln("Starting on: ", ctx.String("web.listen-address"))
+		pHandler := prober.ProberHandler{
+			Resolver: resolver,
+			Rbls:     rbls,
+			Logger:   log.With("area", "prober"),
+		}
+		http.Handle("/prober", pHandler)
+
+		log.Info("Starting on: " + ctx.String("web.listen-address"))
 		err = http.ListenAndServe(ctx.String("web.listen-address"), nil)
 		if err != nil {
 			return err
@@ -157,14 +199,6 @@ func (app *DNSBLApp) Bootstrap() {
 	}
 }
 
-func (app *DNSBLApp) Run(args []string) error {
-	return app.App.Run(args)
-}
-
-func createCollector(rbls []string, targets []string, resolver string) *collector.RblCollector {
-	return collector.NewRblCollector(rbls, targets, resolver)
-}
-
-func createRegistry() *prometheus.Registry {
-	return prometheus.NewRegistry()
+func (a *DNSBLApp) Run(args []string) error {
+	return a.App.Run(args)
 }

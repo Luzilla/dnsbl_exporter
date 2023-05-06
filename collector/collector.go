@@ -2,12 +2,13 @@ package collector
 
 import (
 	"sync"
+	"time"
 
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/Luzilla/dnsbl_exporter/pkg/rbl"
 	x "github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 const namespace = "luzilla"
@@ -19,45 +20,61 @@ type RblCollector struct {
 	blacklistedMetric *prometheus.Desc
 	errorsMetrics     *prometheus.Desc
 	listedMetric      *prometheus.Desc
+	targetsMetric     *prometheus.Desc
+	durationMetric    *prometheus.Desc
 	rbls              []string
 	resolver          string
 	targets           []string
+	logger            *slog.Logger
 }
 
-func buildFQName(metric string) string {
+func BuildFQName(metric string) string {
 	return prometheus.BuildFQName(namespace, subsystem, metric)
 }
 
 // NewRblCollector ... creates the collector
-func NewRblCollector(rbls []string, targets []string, resolver string) *RblCollector {
+func NewRblCollector(rbls []string, targets []string, resolver string, logger *slog.Logger) *RblCollector {
 	return &RblCollector{
 		configuredMetric: prometheus.NewDesc(
-			buildFQName("used"),
+			BuildFQName("used"),
 			"The number of RBLs to check IPs against (configured via rbls.ini)",
 			nil,
 			nil,
 		),
 		blacklistedMetric: prometheus.NewDesc(
-			buildFQName("ips_blacklisted"),
+			BuildFQName("ips_blacklisted"),
 			"Blacklisted IPs",
 			[]string{"rbl", "ip", "hostname"},
 			nil,
 		),
 		errorsMetrics: prometheus.NewDesc(
-			buildFQName("errors"),
+			BuildFQName("errors"),
 			"The number of errors which occurred testing the RBLs",
 			[]string{"rbl"},
 			nil,
 		),
 		listedMetric: prometheus.NewDesc(
-			buildFQName("listed"),
+			BuildFQName("listed"),
 			"The number of listings in RBLs (this is bad)",
 			[]string{"rbl"},
+			nil,
+		),
+		targetsMetric: prometheus.NewDesc(
+			BuildFQName("targets"),
+			"The number of targets that are being probed (configured via targets.ini or ?target=)",
+			nil,
+			nil,
+		),
+		durationMetric: prometheus.NewDesc(
+			BuildFQName("duration"),
+			"The scrape's duration (in seconds)",
+			nil,
 			nil,
 		),
 		rbls:     rbls,
 		resolver: resolver,
 		targets:  targets,
+		logger:   logger,
 	}
 }
 
@@ -78,23 +95,27 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 		float64(len(c.rbls)),
 	)
 
+	ch <- prometheus.MustNewConstMetric(
+		c.targetsMetric,
+		prometheus.GaugeValue,
+		float64(len(hosts)),
+	)
+
+	start := time.Now()
+
 	// this should be a map of blacklist and a counter (for listings)
 	var listed sync.Map
 
 	// iterate over hosts -> resolve to ip, check
 	for _, host := range hosts {
+		logger := c.logger.With("target", host)
 
-		log.Debugln("Checking ...", host)
+		logger.Debug("Starting check")
 
-		r := rbl.New(dns.New(new(x.Client), c.resolver))
+		r := rbl.New(dns.New(new(x.Client), c.resolver, logger), logger)
 		r.Update(host, c.rbls)
 
 		for _, result := range r.Results {
-			// this is an "error" from the RBL
-			if result.Error {
-				log.Errorln(result.Text)
-			}
-
 			metricValue := 0
 
 			val, _ := listed.LoadOrStore(result.Rbl, 0)
@@ -103,9 +124,13 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 				listed.Store(result.Rbl, val.(int)+1)
 			}
 
+			logger.Debug(result.Rbl+" listed?", slog.Int("v", metricValue))
+
 			labelValues := []string{result.Rbl, result.Address, host}
 
+			// this is an "error" from the RBL
 			if result.Error {
+				logger.Error(result.Text)
 				ch <- prometheus.MustNewConstMetric(
 					c.errorsMetrics,
 					prometheus.GaugeValue,
@@ -123,6 +148,8 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
+	c.logger.Debug("building listed metric")
+
 	for _, rbl := range c.rbls {
 		val, _ := listed.LoadOrStore(rbl, 0)
 		ch <- prometheus.MustNewConstMetric(
@@ -132,5 +159,13 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 			[]string{rbl}...,
 		)
 	}
+
+	c.logger.Debug("finished")
+
+	ch <- prometheus.MustNewConstMetric(
+		c.durationMetric,
+		prometheus.GaugeValue,
+		time.Since(start).Seconds(),
+	)
 
 }

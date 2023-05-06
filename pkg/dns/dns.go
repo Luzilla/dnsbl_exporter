@@ -4,18 +4,20 @@ import (
 	"net"
 
 	x "github.com/miekg/dns"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 type DNSUtil struct {
 	client   *x.Client
 	resolver string
+	logger   *slog.Logger
 }
 
-func New(client *x.Client, resolver string) *DNSUtil {
+func New(client *x.Client, resolver string, logger *slog.Logger) *DNSUtil {
 	return &DNSUtil{
 		client:   client,
 		resolver: resolver,
+		logger:   logger,
 	}
 }
 
@@ -31,7 +33,7 @@ func (d *DNSUtil) GetARecords(target string) ([]string, error) {
 	if err == nil && len(result.Answer) > 0 {
 		for _, ans := range result.Answer {
 			if t, ok := ans.(*x.A); ok {
-				log.Debugf("We have an A-Record %s for %s", t.A.String(), target)
+				d.logger.Debug("We have an A-Record", slog.String("target", target), slog.String("v", t.A.String()))
 				list = append(list, t.A.String())
 			}
 		}
@@ -67,7 +69,7 @@ func (d *DNSUtil) makeQuery(msg *x.Msg) (*x.Msg, error) {
 	}
 
 	result, rt, err := d.client.Exchange(msg, net.JoinHostPort(host, port))
-	log.Debugln("Roundtrip", rt) // fixme -> histogram
+	d.logger.Debug("Roundtrip", slog.Float64("v", rt.Seconds())) // fixme -> histogram
 
 	return result, err
 }
