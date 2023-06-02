@@ -130,7 +130,7 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 
 			// this is an "error" from the RBL
 			if result.Error {
-				logger.Error(result.Text)
+				logger.Error(result.ErrorType.Error(), slog.String("text", result.Text))
 				ch <- prometheus.MustNewConstMetric(
 					c.errorsMetrics,
 					prometheus.GaugeValue,

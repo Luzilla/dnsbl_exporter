@@ -63,9 +63,16 @@ func (d *DNSUtil) GetTxtRecords(target string) ([]string, error) {
 func (d *DNSUtil) makeQuery(msg *x.Msg) (*x.Msg, error) {
 	host, port, err := net.SplitHostPort(d.resolver)
 	if err != nil {
-		if err.Error() == "missing port in address" {
-			port = "53"
+		addrErr, ok := err.(*net.AddrError)
+		if !ok {
+			return nil, err
 		}
+
+		if addrErr.Error() != "missing port in address" {
+			return nil, err
+		}
+
+		port = "53"
 	}
 
 	result, rt, err := d.client.Exchange(msg, net.JoinHostPort(host, port))
