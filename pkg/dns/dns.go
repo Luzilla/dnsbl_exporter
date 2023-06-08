@@ -42,22 +42,25 @@ func (d *DNSUtil) GetARecords(target string) ([]string, error) {
 	return list, err
 }
 
-func (d *DNSUtil) GetTxtRecords(target string) ([]string, error) {
+func (d *DNSUtil) GetTxtRecords(target string) (list []string, err error) {
 	msg := createQuestion(target, x.TypeTXT)
 
 	result, err := d.makeQuery(msg)
+	if err != nil {
+		return
+	}
 
-	var list []string
+	if len(result.Answer) == 0 {
+		return
+	}
 
-	if len(result.Answer) > 0 {
-		for _, ans := range result.Answer {
-			if t, ok := ans.(*x.TXT); ok {
-				list = append(list, t.Txt...)
-			}
+	for _, ans := range result.Answer {
+		if t, ok := ans.(*x.TXT); ok {
+			list = append(list, t.Txt...)
 		}
 	}
 
-	return list, err
+	return
 }
 
 func (d *DNSUtil) makeQuery(msg *x.Msg) (*x.Msg, error) {
