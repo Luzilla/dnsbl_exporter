@@ -1,7 +1,6 @@
 package rbl
 
 import (
-	"fmt"
 	"net"
 	"sync"
 
@@ -70,23 +69,35 @@ func (rbl *Rbl) query(ip string, blacklist string, result *Rblresult) {
 
 	rbl.logger.Debug("About to query RBL", slog.String("rbl", blacklist), slog.String("ip", ip))
 
-	lookup := fmt.Sprintf("%s.%s", ip, blacklist)
+	lookup := ip + "." + blacklist
+	rbl.logger.Debug("Built lookup", slog.String("lookup", lookup))
 
 	res, err := rbl.util.GetARecords(lookup)
-	if len(res) > 0 {
-		result.Listed = true
-
-		txt, _ := net.LookupTXT(lookup)
-		if len(txt) > 0 {
-			result.Text = txt[0]
-		}
-	}
-
 	if err != nil {
+		rbl.logger.Error("error occurred fetching A record", slog.String("msg", err.Error()))
 		result.Error = true
 		result.ErrorType = err
+		return
 	}
 
+	if len(res) == 0 {
+		// ip is not listed
+		return
+	}
+
+	rbl.logger.Debug("ip is listed", slog.String("ip", ip))
+	result.Listed = true
+
+	// fetch (potential) reason
+	txt, err := net.LookupTXT(lookup)
+	if err != nil {
+		rbl.logger.Error("error occurred fetching TXT record", slog.String("msg", err.Error()))
+		return
+	}
+
+	if len(txt) > 0 {
+		result.Text = txt[0]
+	}
 }
 
 func (rbl *Rbl) lookup(rblList string, targetHost string) []Rblresult {
