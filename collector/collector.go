@@ -6,7 +6,6 @@ import (
 
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/Luzilla/dnsbl_exporter/pkg/rbl"
-	x "github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/exp/slog"
 )
@@ -23,7 +22,7 @@ type RblCollector struct {
 	targetsMetric     *prometheus.Desc
 	durationMetric    *prometheus.Desc
 	rbls              []string
-	resolver          string
+	util              *dns.DNSUtil
 	targets           []string
 	logger            *slog.Logger
 }
@@ -33,7 +32,7 @@ func BuildFQName(metric string) string {
 }
 
 // NewRblCollector ... creates the collector
-func NewRblCollector(rbls []string, targets []string, resolver string, logger *slog.Logger) *RblCollector {
+func NewRblCollector(rbls []string, targets []string, util *dns.DNSUtil, logger *slog.Logger) *RblCollector {
 	return &RblCollector{
 		configuredMetric: prometheus.NewDesc(
 			BuildFQName("used"),
@@ -71,10 +70,10 @@ func NewRblCollector(rbls []string, targets []string, resolver string, logger *s
 			nil,
 			nil,
 		),
-		rbls:     rbls,
-		resolver: resolver,
-		targets:  targets,
-		logger:   logger,
+		rbls:    rbls,
+		util:    util,
+		targets: targets,
+		logger:  logger,
 	}
 }
 
@@ -106,36 +105,51 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 	// this should be a map of blacklist and a counter (for listings)
 	var listed sync.Map
 
-	// iterate over hosts -> resolve to ip, check
+	resolver := rbl.NewRBLResolver(c.logger, c.util)
+
+	// iterate over hosts -> resolve to ip
+	targets := make(chan []rbl.Target)
 	for _, host := range hosts {
-		logger := c.logger.With("target", host)
+		go resolver.Do(host, targets)
+	}
 
-		logger.Debug("Starting check")
+	// run the check
+	for _, target := range <-targets {
 
-		r := rbl.New(dns.New(new(x.Client), c.resolver, logger), logger)
-		r.Update(host, c.rbls)
+		results := make([]rbl.Result, 0)
 
-		for _, result := range r.Results {
+		result := make(chan rbl.Result)
+		for _, blocklist := range c.rbls {
+			logger := c.logger.With("host", target.Host)
+
+			logger.Debug("starting check")
+
+			r := rbl.New(c.util, logger)
+			go r.Update(target, blocklist, result)
+			results = append(results, <-result)
+		}
+
+		for _, check := range results {
 			metricValue := 0
 
-			val, _ := listed.LoadOrStore(result.Rbl, 0)
-			if result.Listed {
+			val, _ := listed.LoadOrStore(check.Rbl, 0)
+			if check.Listed {
 				metricValue = 1
-				listed.Store(result.Rbl, val.(int)+1)
+				listed.Store(check.Rbl, val.(int)+1)
 			}
 
-			logger.Debug(result.Rbl+" listed?", slog.Int("v", metricValue))
+			c.logger.Debug("listed?", slog.Int("v", metricValue), slog.String("rbl", check.Rbl))
 
-			labelValues := []string{result.Rbl, result.Address, host}
+			labelValues := []string{check.Rbl, check.Target.IP.String(), check.Target.Host}
 
-			// this is an "error" from the RBL
-			if result.Error {
-				logger.Error(result.ErrorType.Error(), slog.String("text", result.Text))
+			// this is an "error" from the RBL/transport
+			if check.Error {
+				c.logger.Error(check.ErrorType.Error(), slog.String("text", check.Text))
 				ch <- prometheus.MustNewConstMetric(
 					c.errorsMetrics,
 					prometheus.GaugeValue,
 					1,
-					[]string{result.Rbl}...,
+					[]string{check.Rbl}...,
 				)
 			}
 

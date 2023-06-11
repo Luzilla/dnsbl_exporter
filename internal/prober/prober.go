@@ -4,14 +4,15 @@ import (
 	"net/http"
 
 	"github.com/Luzilla/dnsbl_exporter/internal/setup"
+	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/exp/slog"
 )
 
 type ProberHandler struct {
-	Resolver string
-	Rbls     []string
-	Logger   *slog.Logger
+	DNS    *dns.DNSUtil
+	Rbls   []string
+	Logger *slog.Logger
 }
 
 func (p ProberHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +26,7 @@ func (p ProberHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	targets = append(targets, r.URL.Query().Get("target"))
 
 	registry := setup.CreateRegistry()
-	collector := setup.CreateCollector(p.Rbls, targets, p.Resolver, p.Logger)
+	collector := setup.CreateCollector(p.Rbls, targets, p.DNS, p.Logger)
 	registry.MustRegister(collector)
 
 	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{

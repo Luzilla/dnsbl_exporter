@@ -41,14 +41,13 @@ jobs:
           - 5053:5053
           - 5053:5053/udp
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v3
         with:
           name: dnsbl_exporter
       - name: Allow running exporter
         run: chmod +x ./dnsbl-exporter
       - name: Start dnsbl_exporter 
-        run: ./dnsbl-exporter --config.dns-resolver=unbound:5053 &
+        run: ./dnsbl-exporter --config.dns-resolver=0.0.0.0:5053 &
       - name: Test "/" exists
         run: curl -I http://127.0.0.1:9211/
       - name: Test "/metrics" exists
