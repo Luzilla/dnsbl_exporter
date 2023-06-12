@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  snapshot:
+  e2e:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,19 +38,31 @@ jobs:
       unbound:
         image: klutchell/unbound:latest
         ports:
-          - 5053:5053
+          - 5053:5053/tcp
           - 5053:5053/udp
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/checkout@v3
         with:
-          name: dnsbl_exporter
-      - name: Allow running exporter
-        run: chmod +x ./dnsbl-exporter
-      - name: Start dnsbl_exporter 
-        run: ./dnsbl-exporter --config.dns-resolver=0.0.0.0:5053 &
-      - name: Test "/" exists
-        run: curl -I http://127.0.0.1:9211/
-      - name: Test "/metrics" exists
-        run: curl -I http://127.0.0.1:9211/metrics
-      - name: Test "/metrics" with targets
-        run: curl -i http://127.0.0.1:9211/metrics
+          fetch-depth: 0
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: goreleaser/goreleaser-action@v4
+        with:
+          version: latest
+          args: release --config ./.goreleaser.ci.yml --clean --snapshot
+      - run: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64_v1
+      - uses: JarvusInnovations/background-action@v1
+        with:
+          run: |
+            ls -lah && ./dnsbl-exporter --log.debug --config.dns-resolver=localhost:5053 &
+          wait-on: |
+            http-get://localhost:9211/
+            http-get://localhost:9211/metrics
+            http-get://localhost:9211/prober?target=github.com
+          tail: true # true = stderr,stdout
+          log-output-resume: stderr
+          wait-for: 1m
+          log-output: stderr,stdout
+          working-directory: ./dist/dnsbl_exporter_linux_amd64_v1

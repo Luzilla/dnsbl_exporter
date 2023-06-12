@@ -39,11 +39,11 @@ func TestNew(t *testing.T) {
 		addr string
 		err  bool
 	}{
-		{"0.0.0.0", false},    // assert the port gets added
-		{"0.0.0.0:53", false}, // standard input
+		{"0.0.0.0", false},      // assert the port gets added
+		{"0.0.0.0:53", false},   // standard input
+		{"unbound:5353", false}, // tests
 	} {
 		_, err := dns.New(new(x.Client), tc.addr, tests.CreateTestLogger(t))
 		assert.NoError(t, err, tc.addr)
 	}
-
 }

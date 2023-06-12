@@ -108,7 +108,6 @@ func NewApp(name string, version string) DNSBLApp {
 func (a *DNSBLApp) Bootstrap() {
 	a.App.Action = func(ctx *cli.Context) error {
 		// setup logging
-		fmt.Println("VERSION: " + appVersion)
 		handler := &slog.HandlerOptions{}
 		var writer io.Writer
 
