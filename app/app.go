@@ -14,7 +14,6 @@ import (
 	"github.com/Luzilla/dnsbl_exporter/internal/prober"
 	"github.com/Luzilla/dnsbl_exporter/internal/setup"
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/exp/slog"
@@ -180,7 +179,7 @@ func (a *DNSBLApp) Bootstrap() {
 
 			registryExporter.MustRegister(
 				collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-				prometheus.NewGoCollector(),
+				collectors.NewGoCollector(),
 			)
 		}
 

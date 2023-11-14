@@ -11,6 +11,7 @@ type IndexHandler struct {
 }
 
 func (i IndexHandler) Handler(w http.ResponseWriter, r *http.Request) {
+	//nolint:errcheck
 	w.Write([]byte(`<html>
 		<head><title>` + i.Name + `</title></head>
 		<body>
