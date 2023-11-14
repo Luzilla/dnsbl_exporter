@@ -13,9 +13,12 @@ import (
 	"github.com/Luzilla/dnsbl_exporter/internal/metrics"
 	"github.com/Luzilla/dnsbl_exporter/internal/prober"
 	"github.com/Luzilla/dnsbl_exporter/internal/setup"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/exp/slog"
+
+	x "github.com/miekg/dns"
 )
 
 type DNSBLApp struct {
@@ -104,7 +107,6 @@ func NewApp(name string, version string) DNSBLApp {
 func (a *DNSBLApp) Bootstrap() {
 	a.App.Action = func(ctx *cli.Context) error {
 		// setup logging
-		fmt.Println("VERSION: " + appVersion)
 		handler := &slog.HandlerOptions{}
 		var writer io.Writer
 
@@ -161,7 +163,13 @@ func (a *DNSBLApp) Bootstrap() {
 
 		registry := setup.CreateRegistry()
 
-		rblCollector := setup.CreateCollector(rbls, targets, resolver, log.With("area", "metrics"))
+		dnsUtil, err := dns.New(new(x.Client), resolver, log)
+		if err != nil {
+			log.Error("failed to initialize dns client")
+			return err
+		}
+
+		rblCollector := setup.CreateCollector(rbls, targets, dnsUtil, log.With("area", "metrics"))
 		registry.MustRegister(rblCollector)
 
 		registryExporter := setup.CreateRegistry()
@@ -170,8 +178,8 @@ func (a *DNSBLApp) Bootstrap() {
 			log.Info("Exposing exporter metrics")
 
 			registryExporter.MustRegister(
-				prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
-				prometheus.NewGoCollector(),
+				collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+				collectors.NewGoCollector(),
 			)
 		}
 
@@ -183,13 +191,16 @@ func (a *DNSBLApp) Bootstrap() {
 		http.Handle(ctx.String("web.telemetry-path"), mHandler.Handler())
 
 		pHandler := prober.ProberHandler{
-			Resolver: resolver,
-			Rbls:     rbls,
-			Logger:   log.With("area", "prober"),
+			DNS:    dnsUtil,
+			Rbls:   rbls,
+			Logger: log.With("area", "prober"),
 		}
 		http.Handle("/prober", pHandler)
 
-		log.Info("Starting on: " + ctx.String("web.listen-address"))
+		log.Info("starting exporter",
+			slog.String("web.listen-address", ctx.String("web.listen-address")),
+			slog.String("resolver", resolver),
+		)
 		err = http.ListenAndServe(ctx.String("web.listen-address"), nil)
 		if err != nil {
 			return err

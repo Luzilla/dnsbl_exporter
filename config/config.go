@@ -49,7 +49,7 @@ func (c *Config) GetTargets(cfg *ini.File) []string {
 
 // LoadFile ...
 func (c *Config) LoadFile(path string) (*ini.File, error) {
-	c.Logger.Debug("Loading configuration file: " + path)
+	c.Logger.Debug("loading configuration file: " + path)
 
 	cfg, err := loadConfig(path)
 	if err != nil {

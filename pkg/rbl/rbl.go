@@ -3,129 +3,103 @@ package rbl
 import (
 	"fmt"
 	"net"
-	"sync"
+	"strings"
 
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/Luzilla/godnsbl"
 	"golang.org/x/exp/slog"
 )
 
-// Rblresult extends godnsbl and adds RBL name
-type Rblresult struct {
-	Address   string
+// RblResult extends godnsbl and adds RBL name
+type Result struct {
+	Target    Target
 	Listed    bool
 	Text      string
 	Error     bool
 	ErrorType error
 	Rbl       string
-	Target    string
 }
 
 // Rbl ... object
-type Rbl struct {
-	Results []Rblresult
+type RBL struct {
+	Results []Result
 	util    *dns.DNSUtil
 	logger  *slog.Logger
 }
 
 // NewRbl ... factory
-func New(util *dns.DNSUtil, logger *slog.Logger) Rbl {
-	var results []Rblresult
-
-	rbl := Rbl{
+func New(util *dns.DNSUtil, logger *slog.Logger) *RBL {
+	return &RBL{
 		logger:  logger,
 		util:    util,
-		Results: results,
+		Results: make([]Result, 0),
 	}
-
-	return rbl
 }
 
 // Update runs the checks for an IP against against all "rbls"
-func (rbl *Rbl) Update(ip string, rbls []string) {
-	// from: godnsbl
-	wg := &sync.WaitGroup{}
-
-	for _, source := range rbls {
-		wg.Add(1)
-		go func(source string, ip string) {
-			defer wg.Done()
-
-			rbl.logger.Debug("Next up", slog.String("rbl", source), slog.String("ip", ip))
-
-			results := rbl.lookup(source, ip)
-			if len(results) == 0 {
-				rbl.Results = []Rblresult{}
-			} else {
-				rbl.Results = results
-			}
-		}(source, ip)
-	}
-
-	wg.Wait()
+func (rbl *RBL) Update(target Target, blocklist string, c chan<- Result) {
+	go rbl.lookup(blocklist, target, c, rbl.logger.With(
+		slog.Group("unit",
+			slog.String("target", target.Host),
+			slog.String("rbl", blocklist))))
 }
 
-func (rbl *Rbl) query(ip string, blacklist string, result *Rblresult) {
-	result.Listed = false
+func (r *RBL) lookup(blocklist string, ip Target, c chan<- Result, logger *slog.Logger) {
+	logger.Debug("next up")
 
-	rbl.logger.Debug("About to query RBL", slog.String("rbl", blacklist), slog.String("ip", ip))
-
-	lookup := fmt.Sprintf("%s.%s", ip, blacklist)
-
-	res, err := rbl.util.GetARecords(lookup)
-	if len(res) > 0 {
-		result.Listed = true
-
-		txt, _ := net.LookupTXT(lookup)
-		if len(txt) > 0 {
-			result.Text = txt[0]
-		}
+	result := Result{
+		Target: ip,
+		Listed: false,
+		Rbl:    blocklist,
 	}
 
+	logger.Debug("about to query RBL")
+
+	lookup := godnsbl.Reverse(ip.IP) + "." + result.Rbl
+	logger.Debug("built lookup", slog.String("lookup", lookup))
+
+	res, err := r.util.GetARecords(lookup)
 	if err != nil {
+		logger.Error("error occurred fetching A record", slog.String("msg", err.Error()))
+
 		result.Error = true
 		result.ErrorType = err
+		c <- result
+		return
 	}
 
-}
-
-func (rbl *Rbl) lookup(rblList string, targetHost string) []Rblresult {
-	var ips []string
-
-	addr := net.ParseIP(targetHost)
-	if addr == nil {
-		ipsA, err := rbl.util.GetARecords(targetHost)
-		if err != nil {
-			rbl.logger.Error(err.Error())
-			return rbl.Results
-		}
-
-		ips = ipsA
-	} else {
-		rbl.logger.Info("We had an ip", slog.String("ip", addr.String()))
-		ips = append(ips, addr.String())
+	if len(res) == 0 {
+		// ip is not listed
+		c <- result
+		return
 	}
 
-	for _, ip := range ips {
-		res := Rblresult{}
-		res.Target = targetHost
-		res.Address = ip
-		res.Rbl = rblList
+	logger.Debug("ip is listed")
 
-		// attempt to "validate" the IP
-		ValidIPAddress := net.ParseIP(ip)
-		if ValidIPAddress == nil {
-			rbl.logger.Error("Unable to parse IP", slog.String("ip", ip))
-			continue
-		}
+	result.Listed = true
 
-		// reverse it, for the look up
-		revIP := godnsbl.Reverse(ValidIPAddress)
-
-		rbl.query(revIP, rblList, &res)
-
-		rbl.Results = append(rbl.Results, res)
+	reason := net.ParseIP(res[0])
+	if reason == nil {
+		logger.Error("error getting (first) reason: %s", strings.Join(res, ", "))
+		result.Error = true
+		result.ErrorType = fmt.Errorf("error getting the (first) reason: %s", strings.Join(res, ", "))
+		c <- result
+		return
 	}
 
-	return rbl.Results
+	// fetch (potential) reason
+	txt, err := r.util.GetTxtRecords(godnsbl.Reverse(reason) + "." + result.Rbl)
+	if err != nil {
+		logger.Error("error occurred fetching TXT record", slog.String("msg", err.Error()))
+
+		result.Error = true
+		result.ErrorType = err
+		c <- result
+		return
+	}
+
+	if len(txt) > 0 {
+		result.Text = strings.Join(txt, ", ")
+	}
+	c <- result
 }

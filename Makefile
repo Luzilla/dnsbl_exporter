@@ -4,7 +4,9 @@ build:
 
 .PHONY: run-dev
 run-dev:
-	go run dnsbl_exporter.go --log.debug
+	go run dnsbl_exporter.go \
+		--log.debug \
+		--config.dns-resolver 0.0.0.0:15353
 
 .PHONY: snapshot
 snapshot:

@@ -9,7 +9,7 @@ import (
 
 // The following are customized during build
 var exporterName string = "dnsbl-exporter"
-var exporterVersion string
+var exporterVersion string = "dev"
 
 func main() {
 	dnsbl := app.NewApp(exporterName, exporterVersion)
@@ -20,5 +20,4 @@ func main() {
 		fmt.Println("error: " + err.Error())
 		os.Exit(1)
 	}
-
 }
