@@ -48,7 +48,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      - uses: goreleaser/goreleaser-action@v4
+      - uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
           args: release --config ./.goreleaser.ci.yml --clean --snapshot
