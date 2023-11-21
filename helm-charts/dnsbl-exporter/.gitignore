@@ -1,0 +1,9 @@
+template.*.yaml
+template.*.yml
+values.*.yaml
+values.*.yml
+*.tmp.sh
+*.tmp.md
+*.tmp.sql
+TODO.md
+charts/*
