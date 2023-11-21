@@ -17,7 +17,7 @@ builds:
   - CGO_ENABLED=0
 dockers:
 - image_templates:
-  - 'ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-amd64'
+  - 'ghcr.io/Luzilla/{{.ProjectName}}:{{ .Tag }}-amd64'
   dockerfile: Dockerfile
   use: buildx
   build_flag_templates:
@@ -34,7 +34,7 @@ dockers:
   goarch: amd64
   goos: linux
 - image_templates:
-  - 'ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-arm64'
+  - 'ghcr.io/Luzilla/{{.ProjectName}}:{{ .Tag }}-arm64'
   dockerfile: Dockerfile
   use: buildx
   build_flag_templates:
@@ -51,10 +51,10 @@ dockers:
   goarch: arm64
   goos: linux
 docker_manifests:
-- name_template: ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}
+- name_template: ghcr.io/Luzilla/{{.ProjectName}}:{{ .Tag }}
   image_templates:
-  - ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-amd64
-  - ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-arm64
+  - ghcr.io/Luzilla/{{.ProjectName}}:{{ .Tag }}-amd64
+  - ghcr.io/Luzilla/{{.ProjectName}}:{{ .Tag }}-arm64
 archives:
 - files:
   - none*
