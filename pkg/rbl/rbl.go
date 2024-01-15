@@ -44,18 +44,25 @@ func (rbl *RBL) Update(target Target, blocklist string, c chan<- Result) {
 			slog.String("rbl", blocklist))))
 }
 
-func (r *RBL) lookup(blocklist string, ip Target, c chan<- Result, logger *slog.Logger) {
+func (r *RBL) lookup(blocklist string, target Target, c chan<- Result, logger *slog.Logger) {
 	logger.Debug("next up")
 
 	result := Result{
-		Target: ip,
+		Target: target,
 		Listed: false,
 		Rbl:    blocklist,
 	}
+	domainBased := target.IP == nil
 
 	logger.Debug("about to query RBL")
 
-	lookup := godnsbl.Reverse(ip.IP) + "." + result.Rbl
+	var lookup string
+	if domainBased {
+		lookup = target.Host + "." + result.Rbl
+	} else {
+		lookup = godnsbl.Reverse(target.IP) + "." + result.Rbl
+	}
+
 	logger.Debug("built lookup", slog.String("lookup", lookup))
 
 	res, err := r.util.GetARecords(lookup)
@@ -69,12 +76,12 @@ func (r *RBL) lookup(blocklist string, ip Target, c chan<- Result, logger *slog.
 	}
 
 	if len(res) == 0 {
-		// ip is not listed
+		// target (domain or ip) is not listed
 		c <- result
 		return
 	}
 
-	logger.Debug("ip is listed")
+	logger.Debug("target is listed")
 
 	result.Listed = true
 
@@ -86,9 +93,18 @@ func (r *RBL) lookup(blocklist string, ip Target, c chan<- Result, logger *slog.
 		c <- result
 		return
 	}
+	if domainBased {
+		// @see https://datatracker.ietf.org/doc/html/rfc5782
+		result.Target.IP = reason
+	}
 
 	// fetch (potential) reason
-	txt, err := r.util.GetTxtRecords(godnsbl.Reverse(reason) + "." + result.Rbl)
+	var txt []string
+	if domainBased {
+		txt, err = r.util.GetTxtRecords(lookup)
+	} else {
+		txt, err = r.util.GetTxtRecords(godnsbl.Reverse(reason) + "." + result.Rbl)
+	}
 	if err != nil {
 		logger.Error("error occurred fetching TXT record", slog.String("msg", err.Error()))
 

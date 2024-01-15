@@ -8,6 +8,14 @@ run-dev:
 		--log.debug \
 		--config.dns-resolver 0.0.0.0:15353
 
+.PHONY: run-dev-domain
+run-dev-domain:
+	go run dnsbl_exporter.go \
+		--log.debug \
+		--config.rbls ./rbls-domain.ini \
+		--config.domain-based \
+		--config.dns-resolver 0.0.0.0:15353
+
 .PHONY: snapshot
 snapshot:
 	goreleaser build --snapshot --clean

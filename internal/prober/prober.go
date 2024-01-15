@@ -10,9 +10,10 @@ import (
 )
 
 type ProberHandler struct {
-	DNS    *dns.DNSUtil
-	Rbls   []string
-	Logger *slog.Logger
+	DNS         *dns.DNSUtil
+	Rbls        []string
+	DomainBased bool
+	Logger      *slog.Logger
 }
 
 func (p ProberHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -26,7 +27,7 @@ func (p ProberHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	targets = append(targets, r.URL.Query().Get("target"))
 
 	registry := setup.CreateRegistry()
-	collector := setup.CreateCollector(p.Rbls, targets, p.DNS, p.Logger)
+	collector := setup.CreateCollector(p.Rbls, targets, p.DomainBased, p.DNS, p.Logger)
 	registry.MustRegister(collector)
 
 	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{

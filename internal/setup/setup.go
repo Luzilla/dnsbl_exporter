@@ -7,8 +7,8 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func CreateCollector(rbls []string, targets []string, dnsUtil *dns.DNSUtil, logger *slog.Logger) *collector.RblCollector {
-	return collector.NewRblCollector(rbls, targets, dnsUtil, logger)
+func CreateCollector(rbls []string, targets []string, domainBased bool, dnsUtil *dns.DNSUtil, logger *slog.Logger) *collector.RblCollector {
+	return collector.NewRblCollector(rbls, targets, domainBased, dnsUtil, logger)
 }
 
 func CreateRegistry() *prometheus.Registry {
