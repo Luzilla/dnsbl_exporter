@@ -81,6 +81,10 @@ func NewRblCollector(rbls []string, targets []string, util *dns.DNSUtil, logger 
 func (c *RblCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.configuredMetric
 	ch <- c.blacklistedMetric
+	ch <- c.errorsMetrics
+	ch <- c.listedMetric
+	ch <- c.targetsMetric
+	ch <- c.durationMetric
 }
 
 // Collect ...
