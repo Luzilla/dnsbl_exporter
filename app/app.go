@@ -58,6 +58,11 @@ func NewApp(name string, version string) DNSBLApp {
 			Usage:   "Configuration file which contains the targets to check.",
 			EnvVars: []string{"DNSBL_EXP_TARGETS"},
 		},
+		&cli.BoolFlag{
+			Name:  "config.domain-based",
+			Usage: "RBLS are domain based blacklists.",
+			Value: false,
+		},
 		&cli.StringFlag{
 			Name:    "web.listen-address",
 			Value:   ":9211",
@@ -169,7 +174,7 @@ func (a *DNSBLApp) Bootstrap() {
 			return err
 		}
 
-		rblCollector := setup.CreateCollector(rbls, targets, dnsUtil, log.With("area", "metrics"))
+		rblCollector := setup.CreateCollector(rbls, targets, ctx.Bool("config.domain-based"), dnsUtil, log.With("area", "metrics"))
 		registry.MustRegister(rblCollector)
 
 		registryExporter := setup.CreateRegistry()
@@ -191,9 +196,10 @@ func (a *DNSBLApp) Bootstrap() {
 		http.Handle(ctx.String("web.telemetry-path"), mHandler.Handler())
 
 		pHandler := prober.ProberHandler{
-			DNS:    dnsUtil,
-			Rbls:   rbls,
-			Logger: log.With("area", "prober"),
+			DNS:         dnsUtil,
+			Rbls:        rbls,
+			DomainBased: ctx.Bool("config.domain-based"),
+			Logger:      log.With("area", "prober"),
 		}
 		http.Handle("/prober", pHandler)
 

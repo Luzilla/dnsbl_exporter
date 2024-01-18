@@ -54,6 +54,13 @@ func CreateDNSMock(t *testing.T) *mockdns.Server {
 		"10.0.0.127.zen.spamhaus.org.": {
 			TXT: []string{"https://www.spamhaus.org/query/ip/127.0.0.10"},
 		},
+		// domain based rbl responses
+		// https://www.spamhaus.org/faq/section/Spamhaus%20DBL#277
+		"dbltest.com.dbl.spamhaus.org.": {
+			A:   []string{"127.0.1.2"},
+			TXT: []string{"https://www.spamhaus.org/query/domain/dbltest.com"},
+		},
+		"example.com.dbl.spamhaus.org.": {},
 	}, true)
 	if err != nil {
 		assert.FailNow(t, "failed building mock", "error: %s", err)

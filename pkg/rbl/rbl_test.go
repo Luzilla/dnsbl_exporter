@@ -112,6 +112,41 @@ func TestRblSuite(t *testing.T) {
 		assert.True(t, result.Listed)
 		assert.Contains(t, result.Text, "https://www.spamhaus.org/")
 	})
+
+	t.Run("run=domain", func(t *testing.T) {
+		dnsMock := tests.CreateDNSMock(t)
+		defer dnsMock.Close()
+
+		logger := tests.CreateTestLogger(t)
+		d := tests.CreateDNSUtil(t, dnsMock.LocalAddr())
+		r := rbl.New(d, logger)
+
+		// https://www.spamhaus.org/faq/section/Spamhaus%20DBL#277
+		targets := []rbl.Target{
+			{Host: "dbltest.com"},
+			{Host: "example.com"},
+		}
+
+		for _, target := range targets {
+			blocklist := "dbl.spamhaus.org"
+			c := make(chan rbl.Result)
+			defer close(c)
+
+			r.Update(target, blocklist, c)
+
+			res := <-c
+			assert.False(t, res.Error)
+			assert.NoError(t, res.ErrorType)
+			if target.Host == "dbltest.com" {
+				assert.True(t, res.Listed)
+				assert.Equal(t, "127.0.1.2", res.Target.IP.String())
+				assert.Equal(t, res.Text, "https://www.spamhaus.org/query/domain/dbltest.com")
+			} else {
+				assert.False(t, res.Listed)
+				assert.Nil(t, res.Target.IP)
+			}
+		}
+	})
 }
 
 func TestResolver(t *testing.T) {

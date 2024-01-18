@@ -24,6 +24,7 @@ type RblCollector struct {
 	rbls              []string
 	util              *dns.DNSUtil
 	targets           []string
+	domainBased       bool
 	logger            *slog.Logger
 }
 
@@ -32,7 +33,7 @@ func BuildFQName(metric string) string {
 }
 
 // NewRblCollector ... creates the collector
-func NewRblCollector(rbls []string, targets []string, util *dns.DNSUtil, logger *slog.Logger) *RblCollector {
+func NewRblCollector(rbls []string, targets []string, domainBased bool, util *dns.DNSUtil, logger *slog.Logger) *RblCollector {
 	return &RblCollector{
 		configuredMetric: prometheus.NewDesc(
 			BuildFQName("used"),
@@ -70,10 +71,11 @@ func NewRblCollector(rbls []string, targets []string, util *dns.DNSUtil, logger 
 			nil,
 			nil,
 		),
-		rbls:    rbls,
-		util:    util,
-		targets: targets,
-		logger:  logger,
+		rbls:        rbls,
+		util:        util,
+		targets:     targets,
+		domainBased: domainBased,
+		logger:      logger,
 	}
 }
 
@@ -120,7 +122,14 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 		close(targets)
 	}()
 	for _, host := range hosts {
-		go resolver.Do(host, targets, wg.Done)
+		if c.domainBased {
+			go func(hostname string) {
+				targets <- rbl.Target{Host: hostname}
+				wg.Done()
+			}(host)
+		} else {
+			go resolver.Do(host, targets, wg.Done)
+		}
 	}
 	// run the check
 	for target := range targets {
@@ -147,9 +156,12 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 				listed.Store(check.Rbl, val.(int)+1)
 			}
 
-			c.logger.Debug("listed?", slog.Int("v", metricValue), slog.String("rbl", check.Rbl))
-
-			labelValues := []string{check.Rbl, check.Target.IP.String(), check.Target.Host}
+			c.logger.Debug("listed?", slog.Int("v", metricValue), slog.String("rbl", check.Rbl), slog.String("reason", check.Text))
+			ip := ""
+			if len(check.Target.IP) > 0 {
+				ip = check.Target.IP.String()
+			}
+			labelValues := []string{check.Rbl, ip, check.Target.Host}
 
 			// this is an "error" from the RBL/transport
 			if check.Error {
