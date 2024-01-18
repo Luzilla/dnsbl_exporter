@@ -2,6 +2,7 @@ package rbl_test
 
 import (
 	"net"
+	"sync"
 	"testing"
 
 	"github.com/Luzilla/dnsbl_exporter/internal/tests"
@@ -20,18 +21,22 @@ func TestRblSuite(t *testing.T) {
 
 		resolver := rbl.NewRBLResolver(logger, d)
 
-		targets := make(chan []rbl.Target)
-		defer close(targets)
-		go resolver.Do("relay.heise.de", targets)
+		targets := make(chan rbl.Target)
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			wg.Wait()
+			close(targets)
+		}()
+		go resolver.Do("relay.heise.de", targets, wg.Done)
 
-		for _, ip := range <-targets {
+		for ip := range targets {
 			for _, blocklist := range []string{"cbl.abuseat.org", "zen.spamhaus.org"} {
 				c := make(chan rbl.Result)
-				defer close(c)
-
 				r.Update(ip, blocklist, c)
-
 				res := <-c
+				close(c)
+
 				assert.False(t, res.Error)
 				assert.NoError(t, res.ErrorType)
 			}
@@ -117,10 +122,16 @@ func TestResolver(t *testing.T) {
 
 	resolver := rbl.NewRBLResolver(logger, tests.CreateDNSUtil(t, dnsMock.LocalAddr()))
 
-	c := make(chan []rbl.Target)
-	go resolver.Do("relay.heise.de", c)
+	c := make(chan rbl.Target)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		wg.Wait()
+		close(c)
+	}()
+	go resolver.Do("relay.heise.de", c, wg.Done)
 
-	for _, ip := range <-c {
+	for ip := range c {
 		assert.Equal(t, "relay.heise.de", ip.Host)
 		assert.NotEmpty(t, ip.IP.String())
 	}

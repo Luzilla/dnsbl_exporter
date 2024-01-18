@@ -81,6 +81,10 @@ func NewRblCollector(rbls []string, targets []string, util *dns.DNSUtil, logger 
 func (c *RblCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.configuredMetric
 	ch <- c.blacklistedMetric
+	ch <- c.errorsMetrics
+	ch <- c.listedMetric
+	ch <- c.targetsMetric
+	ch <- c.durationMetric
 }
 
 // Collect ...
@@ -108,13 +112,18 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 	resolver := rbl.NewRBLResolver(c.logger, c.util)
 
 	// iterate over hosts -> resolve to ip
-	targets := make(chan []rbl.Target)
+	targets := make(chan rbl.Target)
+	wg := sync.WaitGroup{}
+	wg.Add(len(hosts))
+	go func() {
+		wg.Wait()
+		close(targets)
+	}()
 	for _, host := range hosts {
-		go resolver.Do(host, targets)
+		go resolver.Do(host, targets, wg.Done)
 	}
-
 	// run the check
-	for _, target := range <-targets {
+	for target := range targets {
 
 		results := make([]rbl.Result, 0)
 

@@ -25,18 +25,16 @@ func NewRBLResolver(logger *slog.Logger, util *dns.DNSUtil) *Resolver {
 	}
 }
 
-func (r *Resolver) Do(target string, c chan<- []Target) {
-	var ips []Target
+func (r *Resolver) Do(target string, c chan<- Target, done func()) {
+	defer done()
 
 	addr := net.ParseIP(target)
 	if addr != nil {
 		// already an IP
 		r.logger.Info("we had an ip already", slog.String("ip", target))
-		c <- []Target{
-			{
-				Host: target,
-				IP:   addr,
-			},
+		c <- Target{
+			Host: target,
+			IP:   addr,
 		}
 		return
 	}
@@ -53,11 +51,9 @@ func (r *Resolver) Do(target string, c chan<- []Target) {
 			r.logger.Error("address failed parsing", slog.String("ip", i))
 			continue
 		}
-		ips = append(ips, Target{
+		c <- Target{
 			Host: target,
 			IP:   a,
-		})
+		}
 	}
-
-	c <- ips
 }
