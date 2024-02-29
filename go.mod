@@ -6,7 +6,7 @@ require github.com/prometheus/client_golang v1.19.0
 
 require (
 	github.com/Luzilla/godnsbl v1.0.0
-	github.com/foxcpp/go-mockdns v1.0.0
+	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/miekg/dns v1.1.58
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.27.1
