@@ -1,14 +1,13 @@
----
 freebsd_instance:
-  image_family: freebsd-13-0
+  image_family: freebsd-14-0
 
 task:
   provision_script:
-    - pkg install -y lang/go git-lite
+  - pkg install -y lang/go git-lite
   script:
-    - uname -a
-    - go mod tidy
-    - go mod verify
-    - go mod vendor -v
-    - go build ./dnsbl_exporter.go
-    - ./dnsbl_exporter -h
+  - uname -a
+  - go mod tidy
+  - go mod verify
+  - go mod vendor -v
+  - go build ./dnsbl_exporter.go
+  - ./dnsbl_exporter -h
