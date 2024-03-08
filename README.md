@@ -54,7 +54,7 @@ Please note: `latest` is not provided.
 The images expect `target.ini` and `rbls.ini` in the following location:
 
 ```sh
-/etc/dnsbl-exporter
+/
 ```
 
 Either start the container and supply the contents, or build your own image:
