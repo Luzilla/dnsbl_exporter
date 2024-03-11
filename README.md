@@ -109,6 +109,15 @@ $ sudo unbound -d -vvvv
 192.42.118.104
 ```
 
+### Use /etc/resolv.conf
+
+Use `system` as a value and the exporter will pick the **first** resolver from `/etc/resolv.conf`.
+
+Adequate permissions need to be set by yourself so the exporter can read the file.
+
+- `--config.dns-resolver=system`
+- `DNSBL_EXP_RESOLVER=system`
+
 ## License / Author
 
 This code is Apache 2.0 licensed.

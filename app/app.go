@@ -12,6 +12,7 @@ import (
 	"github.com/Luzilla/dnsbl_exporter/internal/index"
 	"github.com/Luzilla/dnsbl_exporter/internal/metrics"
 	"github.com/Luzilla/dnsbl_exporter/internal/prober"
+	"github.com/Luzilla/dnsbl_exporter/internal/resolvconf"
 	"github.com/Luzilla/dnsbl_exporter/internal/setup"
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -30,6 +31,8 @@ var (
 	resolver                     string
 )
 
+const resolvConfFile = "/etc/resolv.conf"
+
 // NewApp ...
 func NewApp(name string, version string) DNSBLApp {
 	appName = name
@@ -42,7 +45,7 @@ func NewApp(name string, version string) DNSBLApp {
 		&cli.StringFlag{
 			Name:        "config.dns-resolver",
 			Value:       "127.0.0.1:53",
-			Usage:       "IP address[:port] of the resolver to use.",
+			Usage:       "IP address[:port] of the resolver to use, use `system` to use a resolve from " + resolvConfFile,
 			EnvVars:     []string{"DNSBL_EXP_RESOLVER"},
 			Destination: &resolver,
 		},
@@ -171,6 +174,22 @@ func (a *DNSBLApp) Bootstrap() {
 				return err
 			}
 			log.Info("starting exporter without targets — check the /prober endpoint or correct the .ini file")
+		}
+
+		// use the system's resolver
+		if resolver == "system" {
+			log.Info("fetching resolver from " + resolvConfFile)
+			servers, err := resolvconf.GetServers(resolvConfFile)
+			if err != nil {
+				return err
+			}
+			if len(servers) == 0 {
+				return fmt.Errorf("unable to return a server from %s", resolvConfFile)
+			}
+
+			// pick the first
+			resolver = servers[0]
+			log.Info("using resolver: " + resolver)
 		}
 
 		iHandler := index.IndexHandler{
