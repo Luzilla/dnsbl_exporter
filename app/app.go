@@ -102,6 +102,17 @@ func NewApp(name string, version string) DNSBLApp {
 				return nil
 			},
 		},
+		&cli.StringFlag{
+			Name:  "log.format",
+			Value: "text",
+			Usage: "format, text is logfmt or use json",
+			Action: func(cCtx *cli.Context, v string) error {
+				if v != "text" && v != "json" {
+					return cli.Exit("We currently support only text and json: --log.format", 2)
+				}
+				return nil
+			},
+		},
 	}
 
 	return DNSBLApp{
@@ -110,29 +121,36 @@ func NewApp(name string, version string) DNSBLApp {
 }
 
 func (a *DNSBLApp) Bootstrap() {
-	a.App.Action = func(ctx *cli.Context) error {
+	a.App.Action = func(cCtx *cli.Context) error {
 		// setup logging
 		handler := &slog.HandlerOptions{}
 		var writer io.Writer
 
-		if ctx.Bool("log.debug") {
+		if cCtx.Bool("log.debug") {
 			handler.Level = slog.LevelDebug
 		}
 
-		switch ctx.String("log.output") {
+		switch cCtx.String("log.output") {
 		case "stdout":
 			writer = os.Stdout
 		case "stderr":
 			writer = os.Stderr
 		}
 
-		log := slog.New(handler.NewTextHandler(writer))
+		var logHandler slog.Handler
+		if cCtx.String("log.format") == "text" {
+			logHandler = handler.NewTextHandler(writer)
+		} else {
+			logHandler = handler.NewJSONHandler(writer)
+		}
+
+		log := slog.New(logHandler)
 
 		c := config.Config{
 			Logger: log.With("area", "config"),
 		}
 
-		cfgRbls, err := c.LoadFile(ctx.String("config.rbls"))
+		cfgRbls, err := c.LoadFile(cCtx.String("config.rbls"))
 		if err != nil {
 			return err
 		}
@@ -142,7 +160,7 @@ func (a *DNSBLApp) Bootstrap() {
 			return fmt.Errorf("unable to load the rbls from the config: %w", err)
 		}
 
-		cfgTargets, err := c.LoadFile(ctx.String("config.targets"))
+		cfgTargets, err := c.LoadFile(cCtx.String("config.targets"))
 		if err != nil {
 			return err
 		}
@@ -174,12 +192,12 @@ func (a *DNSBLApp) Bootstrap() {
 			return err
 		}
 
-		rblCollector := setup.CreateCollector(rbls, targets, ctx.Bool("config.domain-based"), dnsUtil, log.With("area", "metrics"))
+		rblCollector := setup.CreateCollector(rbls, targets, cCtx.Bool("config.domain-based"), dnsUtil, log.With("area", "metrics"))
 		registry.MustRegister(rblCollector)
 
 		registryExporter := setup.CreateRegistry()
 
-		if ctx.Bool("web.include-exporter-metrics") {
+		if cCtx.Bool("web.include-exporter-metrics") {
 			log.Info("Exposing exporter metrics")
 
 			registryExporter.MustRegister(
@@ -193,21 +211,21 @@ func (a *DNSBLApp) Bootstrap() {
 			RegistryExporter: registryExporter,
 		}
 
-		http.Handle(ctx.String("web.telemetry-path"), mHandler.Handler())
+		http.Handle(cCtx.String("web.telemetry-path"), mHandler.Handler())
 
 		pHandler := prober.ProberHandler{
 			DNS:         dnsUtil,
 			Rbls:        rbls,
-			DomainBased: ctx.Bool("config.domain-based"),
+			DomainBased: cCtx.Bool("config.domain-based"),
 			Logger:      log.With("area", "prober"),
 		}
 		http.Handle("/prober", pHandler)
 
 		log.Info("starting exporter",
-			slog.String("web.listen-address", ctx.String("web.listen-address")),
+			slog.String("web.listen-address", cCtx.String("web.listen-address")),
 			slog.String("resolver", resolver),
 		)
-		err = http.ListenAndServe(ctx.String("web.listen-address"), nil)
+		err = http.ListenAndServe(cCtx.String("web.listen-address"), nil)
 		if err != nil {
 			return err
 		}
