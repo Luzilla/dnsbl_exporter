@@ -1,68 +1,67 @@
----
 name: integration
 
 on:
   pull_request:
 
 jobs:
-  e2e:
+  snapshot:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: false
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
-        with:
-          version: latest
-          args: release --config ./.goreleaser.ci.yml --clean --snapshot
-      - name: Copy .ini files
-        run: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64_v1
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dnsbl_exporter
-          path: dist/dnsbl_exporter_linux_amd64_v1
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+        cache: false
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v5
+      with:
+        version: latest
+        args: release --config ./.goreleaser.ci.yml --clean --snapshot
+    - name: Copy .ini files
+      run: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64_v1
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: dnsbl_exporter
+        path: dist/dnsbl_exporter_linux_amd64_v1
 
   integration:
     runs-on: ubuntu-latest
     needs:
-      - snapshot
+    - snapshot
     services:
       unbound:
         image: klutchell/unbound:latest
         ports:
-          - 5053:5053/tcp
-          - 5053:5053/udp
+        - 5053:5053/tcp
+        - 5053:5053/udp
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: false
-      - uses: goreleaser/goreleaser-action@v5
-        with:
-          version: latest
-          args: release --config ./.goreleaser.ci.yml --clean --snapshot
-      - run: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64_v1
-      - uses: JarvusInnovations/background-action@v1
-        with:
-          run: |
-            ls -lah && ./dnsbl-exporter --log.debug --config.dns-resolver=localhost:5053 &
-          wait-on: |
-            http-get://localhost:9211/
-            http-get://localhost:9211/metrics
-            http-get://localhost:9211/prober?target=github.com
-          tail: true # true = stderr,stdout
-          log-output-resume: stderr
-          wait-for: 1m
-          log-output: stderr,stdout
-          working-directory: ./dist/dnsbl_exporter_linux_amd64_v1
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+        cache: false
+    - uses: goreleaser/goreleaser-action@v5
+      with:
+        version: latest
+        args: release --config ./.goreleaser.ci.yml --clean --snapshot
+    - run: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64_v1
+    - uses: JarvusInnovations/background-action@v1
+      with:
+        run: |
+          ls -lah && ./dnsbl-exporter --log.debug --config.dns-resolver=localhost:5053 &
+        wait-on: |
+          http-get://localhost:9211/
+          http-get://localhost:9211/metrics
+          http-get://localhost:9211/prober?target=github.com
+        tail: true # true = stderr,stdout
+        log-output-resume: stderr
+        wait-for: 1m
+        log-output: stderr,stdout
+        working-directory: ./dist/dnsbl_exporter_linux_amd64_v1
