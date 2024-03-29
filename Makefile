@@ -1,3 +1,6 @@
+release_name:=dnsbl-exporter-dev
+namespace:=test
+
 .PHONY: build
 build:
 	goreleaser build --snapshot --single-target --clean
@@ -22,7 +25,17 @@ snapshot:
 
 .PHONY: test
 test:
-	act "pull_request" -j test
+	act "pull_request"
+
+.PHOMY: test-deploy-helm
+test-deploy-helm:
+	helm upgrade --install --namespace $(namespace) \
+		-f ./chart/values.yaml -f ./chart/values.dev.yml -f ./chart/values.domain-based.yaml \
+		$(release_name) ./chart
+
+.PHONY: test-undeploy-helm
+test-undeploy-helm:
+	helm uninstall -n $(namespace) $(release_name)
 
 .PHONY: build-unbound
 build-unbound:

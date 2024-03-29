@@ -75,6 +75,22 @@ ADD my-target.ini /etc/dnsbl-exporter/target.ini
 ADD my-rbls.ini /etc/dnsbl-exporter/rbls.ini
 ```
 
+#### Helm
+
+Additional, a helm chart is provided to run the exporter on Kubernetes.
+
+To get started quickly, an unbound container is installed into the pod alongside the exporter. You may turn this off with `unbound.enabled=false`.
+
+To customize the chart, copy [`chart/values.yaml`](chart/values.yaml) to `values.local.yaml` and edit the file; for example, to turn off the included unbound and to supply your own resolver.
+
+The following command creates a `dnsbl-exporter` release which is installed into a namespace called `my-namespace`:
+
+```sh
+helm upgrade --install --namespace my-namespace \
+    -f ./chart/values.yaml \
+    -f ./values.local.yaml \
+    dnsbl-exporter ./chart
+```
 
 #### Querying
 

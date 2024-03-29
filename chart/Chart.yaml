@@ -1,0 +1,17 @@
+apiVersion: v2
+name: dnsbl-exporter
+description: A Helm chart to run dnsbl-exporter on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "v0.7.0-rc2"
+keywords:
+- prometheus
+- exporter
+- dnsbl
+- dns
+- mail
+- smtp
+- monitoring
+maintainers:
+- name: Till Klampaeckel
+  url: https://github.com/till

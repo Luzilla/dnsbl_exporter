@@ -1,0 +1,19 @@
+name: chart
+
+on:
+  pull_request:
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: yokawasa/action-setup-kube-tools@v0.10.0
+      with:
+        setup-tools: |
+          helm
+    - run: helm lint --strict --quiet ./chart
+    - name: default install with unbound
+      run: helm template --debug ./chart
+    - name: install without unbound
+      run: helm template --debug --set unbound.enabled=false --set config.resolver=system ./chart
