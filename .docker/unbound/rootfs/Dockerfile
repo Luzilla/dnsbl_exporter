@@ -1,9 +1,15 @@
 FROM alpinelinux/unbound:latest
 
-RUN apk add --update bind-tools drill
-ADD https://www.internic.net/domain/named.cache /etc/unbound/root.hints
-ADD . /
+RUN apk add --update bind-tools drill \
+    && chown -R unbound:unbound /etc/unbound
 
-RUN unbound-checkconf
+USER unbound
+ADD --chown=unbound:unbound . /
+ADD --chown=unbound:unbound --chmod=0644 https://www.internic.net/domain/named.cache /etc/unbound/root.hints
 
+RUN ls -lah /etc/unbound
+
+RUN /usr/sbin/unbound-checkconf
+
+USER 101:101
 EXPOSE 5353/udp
