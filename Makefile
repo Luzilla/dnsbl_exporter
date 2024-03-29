@@ -23,3 +23,9 @@ snapshot:
 .PHONY: test
 test:
 	act "pull_request" -j test
+
+.PHONY: build-unbound
+build-unbound:
+	docker build \
+		-t ghcr.io/luzilla/unbound:dev \
+		.docker/unbound/rootfs
