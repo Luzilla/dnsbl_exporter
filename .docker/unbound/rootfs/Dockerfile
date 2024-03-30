@@ -11,7 +11,7 @@ RUN ls -lah /etc/unbound
 
 RUN /usr/sbin/unbound-checkconf
 
-USER 101:101
+USER 100:101
 EXPOSE 5353/udp
 
 ENTRYPOINT ["unbound", "-dp"]
