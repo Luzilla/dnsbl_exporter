@@ -21,3 +21,6 @@
 .idea/
 *.tmproj
 .vscode/
+# artifact hub
+artifacthub-repo.yaml
+*.tgz
