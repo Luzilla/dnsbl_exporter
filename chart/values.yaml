@@ -1,0 +1,118 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/luzilla/dnsbl_exporter
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9211"
+podLabels: {}
+
+podSecurityContext: {}
+# fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+
+service:
+  type: ClusterIP
+  port: 9211
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http-9211
+readinessProbe:
+  httpGet:
+    path: /
+    port: http-9211
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# this is the actual config for the dnsbl-exporter
+# aside from from all the different things k8s may 
+# demand of you 
+config:
+  # by default, we use unbound in the same pod, set this otherwise
+  resolver: ""
+  # content of `rbls.ini`
+  rbls:
+  - ix.dnsbl.manitu.net
+  - server=zen.spamhaus.org
+  # content of `targets.ini`
+  targets:
+  - mail.messagingengine.com
+  - smtp.gmail.com
+  - mail.gmx.net
+  - smtp.yahoo.com
+  - smtp.fastmail.com
+  # domain based RBLs: --config.domain-based
+  domain_based: false
+  # logging
+  log:
+    # --log.format=text or json
+    format: text
+    # --log.debug (enable debug level)
+    debug: false
+
+# for demo purposes and mostly otherwise, a container with unbound in the same pod
+# if you disable this, you have to configure your own resolver
+unbound:
+  enabled: true
+  config:
+    port: 5353
+    # for liveness/readiness probes
+    check_target: heise.de
+  image:
+    repository: ghcr.io/luzilla/unbound
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: ""
+  imagePullSecrets: []
+  securityContext:
+    capabilities:
+      drop:
+      - ALL
+      add:
+      - NET_ADMIN
+    readOnlyRootFilesystem: false
+    runAsNonRoot: true
+    runAsUser: 100
+    runAsGroup: 101

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dnsbl-exporter.fullname" . }}
+  labels:
+    {{- include "dnsbl-exporter.labels" . | nindent 4 }}
+data:
+  targets.ini: |-
+    [targets]
+    {{- range $value := .Values.config.targets }}
+    server={{ $value }}
+    {{- end }}
+  rbls.ini: |-
+    [rbl]
+    {{- range $value := .Values.config.rbls }}
+    server={{ $value }}
+    {{- end }}

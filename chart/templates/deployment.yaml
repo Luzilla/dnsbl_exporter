@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dnsbl-exporter.fullname" . }}
+  labels:
+    {{- include "dnsbl-exporter.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "dnsbl-exporter.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "dnsbl-exporter.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      {{- if .Values.unbound.enabled }}
+        - name: unbound
+          securityContext:
+            {{- toYaml .Values.unbound.securityContext | nindent 12 }}
+          image: "{{ .Values.unbound.image.repository }}:{{ .Values.unbound.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.unbound.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.unbound.config.port }}
+              protocol: UDP
+          livenessProbe:
+            exec:
+              command:
+                - "unbound-host"
+                - "-4"
+                - "-C"
+                - "/etc/unbound/unbound.conf"
+                - "{{ .Values.unbound.config.check_target }}"
+            initialDelaySeconds: 10
+            timeoutSeconds: 2
+          readinessProbe:
+            exec:
+              command:
+                - "unbound-host"
+                - "-4"
+                - "-C"
+                - "/etc/unbound/unbound.conf"
+                - "{{ .Values.unbound.config.check_target }}"
+            initialDelaySeconds: 10
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "32Mi"
+            limits:
+              cpu: "0.2"
+              memory: "200Mi"
+        {{- end }}
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http-9211
+              containerPort: 9211
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: dnsbl-config
+              mountPath: /etc/dnsbl-exporter
+          {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: DNSBL_EXP_RBLS
+              value: /etc/dnsbl-exporter/rbls.ini
+            - name: DNSBL_EXP_TARGETS
+              value: /etc/dnsbl-exporter/targets.ini
+            - name: DNSBL_EXP_LISTEN
+              value: 0.0.0.0:9211
+            - name: DNSBL_EXP_RESOLVER
+          {{- if .Values.unbound.enabled }}
+              value: 127.0.0.1:{{ .Values.unbound.config.port }}
+          {{- else }}
+              value: {{ .Values.config.resolver }}
+          {{- end }}
+          args:
+            - "--log.format={{ .Values.config.log.format }}"
+            {{- if .Values.config.log.debug }}
+            - "--log.debug"
+            {{- end }}
+            {{- if .Values.config.domain_based }}
+            - "--config.domain-based"
+            {{- end }}
+      volumes:
+        - name: dnsbl-config
+          configMap:
+            name: {{ include "dnsbl-exporter.fullname" . }}
+      {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

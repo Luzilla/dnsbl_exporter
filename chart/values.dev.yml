@@ -1,0 +1,8 @@
+# local development
+config:
+  log:
+    format: json
+    debug: true
+unbound:
+  image:
+    tag: dev

@@ -1,0 +1,5 @@
+# test domain-based rbl
+config:
+  domain_based: true
+  rbls:
+  - dbl.spamhaus.org
