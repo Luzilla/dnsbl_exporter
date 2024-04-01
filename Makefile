@@ -5,6 +5,11 @@ namespace:=test
 build:
 	goreleaser build --snapshot --single-target --clean
 
+.PHONY: clean
+clean:
+	rm -rf dist/
+	rm ./chart/*.tgz
+
 .PHONY: run-dev
 run-dev:
 	go run dnsbl_exporter.go \
