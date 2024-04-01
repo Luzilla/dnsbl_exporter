@@ -1,18 +1,18 @@
-# dnsbl-exporter
+# dnsbl-exporter - The DNS Block List Exporter
 
-[![pr](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml/badge.svg)](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml) [![Maintainability](https://api.codeclimate.com/v1/badges/31b95e6c679f60e30bea/maintainability)](https://codeclimate.com/github/Luzilla/dnsbl_exporter/maintainability) [![Go Report Card](https://goreportcard.com/badge/github.com/Luzilla/dnsbl_exporter)](https://goreportcard.com/report/github.com/Luzilla/dnsbl_exporter) ![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/Luzilla/dnsbl_exporter?include_prereleases&style=social)
+[![pr](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml/badge.svg)](https://github.com/Luzilla/dnsbl_exporter/actions/workflows/pr.yml) [![Maintainability](https://api.codeclimate.com/v1/badges/31b95e6c679f60e30bea/maintainability)](https://codeclimate.com/github/Luzilla/dnsbl_exporter/maintainability) [![Go Report Card](https://goreportcard.com/badge/github.com/Luzilla/dnsbl_exporter)](https://goreportcard.com/report/github.com/Luzilla/dnsbl_exporter) ![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/Luzilla/dnsbl_exporter?include_prereleases&style=social) [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/luzilla)](https://artifacthub.io/packages/helm/luzilla/dnsbl-exporter)
 
-This is a server which checks the configured hosts against various DNSBL (sometimes refered to as RBLs).
+This is a server (aka Prometheus-compatible exporter) which checks the configured hosts against various DNSBL (DNS Block Lists), sometimes referred to as RBLs.
 
-The idea is to scrape `/metrics` using Prometheus to create graphs, alerts, and so on.
+Should you accept this mission, your task is to scrape `/metrics` using Prometheus to create graphs, alerts, and so on.
 
-**This is an early release. We accept all kinds of feedback - bug reports, PRs, code, docs, ... :)**
+**This is (still) pretty early software. But I happily accept all kinds of feedback - bug reports, PRs, code, docs, ... :)**
 
 ## Using
 
 ### Configuration
 
-See `rbls.ini` and `targets.ini` files in this repository. The files follow the nagios format as this exporter is meant to be a drop-in replacement so you can factor out Nagios, one (simple) step at a time. :-)
+See `rbls.ini` and `targets.ini` files in this repository. The files follow the Nagios format as this exporter is meant to be a drop-in replacement so you can factor out Nagios, one (simple) step at a time. :-)
 
 Otherwise:
 
@@ -38,7 +38,7 @@ $ dnsbl-exporter -h
  1. Get `targets.ini`, and customize. Or use the defaults.
  1. `./dnsbl-exporter`
 
- Go to http://127.0.0.1:9211/ in your browser.
+ Go to `http://127.0.0.1:9211/` in your browser.
 
 #### Container
 
@@ -77,19 +77,22 @@ ADD my-rbls.ini /etc/dnsbl-exporter/rbls.ini
 
 #### Helm
 
-Additional, a helm chart is provided to run the exporter on Kubernetes.
+Additionally, a helm chart is provided to run the exporter on Kubernetes.
 
-To get started quickly, an unbound container is installed into the pod alongside the exporter. You may turn this off with `unbound.enabled=false`.
+To get started quickly, an unbound container is installed into the pod alongside the exporter. This unbound acts as a local DNS server to send queries to. You may turn this off with `unbound.enabled=false` and provide your own resolver (via `config.resolver: an.ip.address:port`).
 
-To customize the chart, copy [`chart/values.yaml`](chart/values.yaml) to `values.local.yaml` and edit the file; for example, to turn off the included unbound and to supply your own resolver.
+To configure the chart, copy [`chart/values.yaml`](chart/values.yaml) to `values.local.yaml` and edit the file; for example, to turn off the included unbound and to supply your own resolver, set your own images and last but not least: supply your own _targets_ and RBLs. 
+
+The sources for the helm chart are in [chart](./chart/), to install it, you can inspect the `Chart.yaml` for the version, check the [helm chart repository](https://github.com/orgs/Luzilla/packages/container/package/charts%2Fdnsbl-exporter) or check out [artifact hub](https://artifacthub.io/packages/helm/luzilla/dnsbl-exporter).
 
 The following command creates a `dnsbl-exporter` release which is installed into a namespace called `my-namespace`:
 
 ```sh
-helm upgrade --install --namespace my-namespace \
+helm upgrade --install \
+    --namespace my-namespace \
     -f ./chart/values.yaml \
     -f ./values.local.yaml \
-    dnsbl-exporter ./chart
+    dnsbl-exporter oci://ghcr.io/luzilla/charts/dnsbl-exporter --version 0.1.0
 ```
 
 #### Querying
@@ -100,27 +103,38 @@ The individual configured servers and their status are represented by a **gauge*
 luzilla_rbls_ips_blacklisted{hostname="mail.gmx.net",ip="212.227.17.168",rbl="ix.dnsbl.manitu.net"} 0
 ```
 
-This represent the server's hostname and the DNSBL in question. `0` for unlisted and `1` for listed. Requests to the DNSBL happen in real-time and are not cached. Take this into account and use accordingly.
+This represent the server's hostname and the DNSBL in question. `0` (zero) for unlisted and `1` (one) for listed.
+Requests to the DNSBL happen in real-time and are not cached. Take this into account and use accordingly.
 
 If the exporter is configured for DNS based blacklists, the ip label represents the return code of the blacklist.
 
+If you happen to be listed — inspect the exporter's logs as they will contain a reason.
+
 ### Caveat
 
-In order to use this, a _proper_ DNS resolver is needed. Proper means: not Google, not Cloudflare, OpenDNS, etc..
-Instead use a resolver like [Unbound](https://github.com/NLnetLabs/unbound).
+In order to use the exporter, a _proper_ DNS resolver is needed. Proper means: not Google, not Cloudflare, nor OpenDNS or Quad9 etc..
+Instead use a resolver like [Unbound](https://github.com/NLnetLabs/unbound) and turn off forwarding.
 
 To test on OSX, follow these steps:
 
-```
+```sh
 $ brew install unbound
 ...
 $ sudo unbound -d -vvvv
 ```
+
 (And leave the Terminal open — there will be ample queries and data for you to see and learn from.)
 
- Verify Unbound is working and resolution is working:
+An alternative to Homebrew is to use Docker; an example image is provided in this repository, it
+contains a working configuration — ymmv.
 
+```sh
+docker run -p 53:5353/udp ghcr.io/luzilla/unbound:v0.7.0-rc3
 ```
+
+Verify Unbound is working and resolution is working:
+
+```sh
  $ dig +short @127.0.0.1 spamhaus.org
 192.42.118.104
 ```
