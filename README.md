@@ -110,6 +110,53 @@ If the exporter is configured for DNS based blacklists, the ip label represents 
 
 If you happen to be listed — inspect the exporter's logs as they will contain a reason.
 
+#### Alerting
+
+The following example alerts use the scraped metrics from this exporter.
+
+##### prometheus
+
+```yaml
+alerts:
+  groups:
+  - name: dnsbl-exporter
+    rules:
+    - alert: DnsblRblListed
+      expr: luzilla_rbls_ips_blacklisted > 0
+      for: 15m
+      labels:
+        severity: critical
+      annotations:
+        description: Domain {{ $labels.hostname }} ({{ $labels.ip }}) listed at {{ $labels.rbl }}
+        summary: Domain listed at RBL
+        runbook_url: https://example.org/wiki/runbooks
+```
+
+For more details, see the [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/).
+
+##### Prometheus Operator
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: dnsbl-rules
+spec:
+  groups:
+  - name: dnsbl
+    rules:
+      - alert: DnsblRblListed
+        expr: luzilla_rbls_ips_blacklisted > 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          description: '{{ $labels.hostname }} ({{ $labels.ip }}) has been blacklisted in {{ $labels.rbl }} for more than 15 minutes.'
+          summary: 'Endpoint {{ $labels.hostname }} is blacklisted'
+```
+
+For more details, see the [Prometheus Operator documentation](https://prometheus-operator.dev/docs/user-guides/alerting/).
+
 ### Caveat
 
 In order to use the exporter, a _proper_ DNS resolver is needed. Proper means: not Google, not Cloudflare, nor OpenDNS or Quad9 etc..
