@@ -22,7 +22,7 @@ $ dnsbl-exporter -h
 --config.dns-resolver value  IP address of the resolver to use. (default: "127.0.0.1:53")
 --config.rbls value          Configuration file which contains RBLs (default: "./rbls.ini")
 --config.targets value       Configuration file which contains the targets to check. (default: "./targets.ini")
---config.domain-based        RBLS are domain instead of IP based blacklists (default: false)
+--config.domain-based        RBLS are domain instead of IP based blocklists (default: false)
 --web.listen-address value   Address to listen on for web interface and telemetry. (default: ":9211")
 --web.telemetry-path value   Path under which to expose metrics. (default: "/metrics")
 --log.debug                  Enable more output in the logs, otherwise INFO.
@@ -106,7 +106,7 @@ luzilla_rbls_ips_blacklisted{hostname="mail.gmx.net",ip="212.227.17.168",rbl="ix
 This represent the server's hostname and the DNSBL in question. `0` (zero) for unlisted and `1` (one) for listed.
 Requests to the DNSBL happen in real-time and are not cached. Take this into account and use accordingly.
 
-If the exporter is configured for DNS based blacklists, the ip label represents the return code of the blacklist.
+If the exporter is configured for DNS based blocklists, the ip label represents the return code of the blocklist.
 
 If you happen to be listed — inspect the exporter's logs as they will contain a reason.
 

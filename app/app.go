@@ -63,7 +63,7 @@ func NewApp(name string, version string) DNSBLApp {
 		},
 		&cli.BoolFlag{
 			Name:  "config.domain-based",
-			Usage: "RBLS are domain based blacklists.",
+			Usage: "RBLS are domain based blocklists.",
 			Value: false,
 		},
 		&cli.StringFlag{
