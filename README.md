@@ -71,8 +71,8 @@ docker run \
 ```docker
 FROM ghcr.io/luzilla/dnsbl_exporter:vA.B.C
 
-ADD my-target.ini /etc/dnsbl-exporter/target.ini
-ADD my-rbls.ini /etc/dnsbl-exporter/rbls.ini
+ADD my-target.ini /target.ini
+ADD my-rbls.ini /rbls.ini
 ```
 
 #### Helm
