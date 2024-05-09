@@ -2,7 +2,7 @@ module github.com/Luzilla/dnsbl_exporter
 
 go 1.20
 
-require github.com/prometheus/client_golang v1.19.0
+require github.com/prometheus/client_golang v1.19.1
 
 require (
 	github.com/Luzilla/godnsbl v1.0.0
