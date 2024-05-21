@@ -1,0 +1,35 @@
+version: "3.7"
+
+services:
+  unbound:
+    image: ghcr.io/luzilla/unbound:v0.7.0-rc3
+    deploy:
+      replicas: 1
+    networks:
+    - lan
+
+  dnsbl:
+    image: ghcr.io/luzilla/dnsbl_exporter:v0.7.0-rc3
+    deploy:
+      replicas: 1
+    configs:
+    - source: rbls.ini
+      target: /rbls.ini
+      uid: '65534'
+      gid: '65534'
+      mode: 0440
+    - source: targets.ini
+      target: /targets.ini
+      uid: '65534'
+      gid: '65534'
+      mode: 0440
+    command:
+    - --config.dns-resolver=tasks.unbound:5353
+    - --config.rbls=/rbls.ini
+    - --config.targets=/targets.ini
+    - --log.format=json
+    networks:
+    - lan
+
+networks:
+  lan:

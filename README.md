@@ -157,6 +157,10 @@ spec:
 
 For more details, see the [Prometheus Operator documentation](https://prometheus-operator.dev/docs/user-guides/alerting/).
 
+#### Dashboard
+
+A dashboard and example screenshot can be found in [contrib](contrib). You may also download it from [grafana.com](https://grafana.com/grafana/dashboards/20966-dnsbl-exporter-dashboard/), `id: 20966`.
+
 ### Caveat
 
 In order to use the exporter, a _proper_ DNS resolver is needed. Proper means: not Google, not Cloudflare, nor OpenDNS or Quad9 etc..
