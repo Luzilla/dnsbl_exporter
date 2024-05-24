@@ -1,0 +1,20 @@
+{{- if .Values.serviceMonitor.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "dnsbl-exporter.fullname" . }}
+  labels:
+    {{- include "dnsbl-exporter.labels" . | nindent 4 }}
+spec:
+  endpoints:
+  - port: svc-9211
+    scheme: "http"
+    path: "/metrics"
+    interval: {{ .interval }}
+    scrapeTimeout: {{ .scrapeTimeout }}
+  jobLabel: "{{ template "dnsbl-exporter.fullname" $ }}"
+  selector:
+    matchLabels:
+      {{- include "dnsbl-exporter.selectorLabels" $ | nindent 6 }}
+{{- end }}

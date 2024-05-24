@@ -92,6 +92,11 @@ config:
     # --log.debug (enable debug level)
     debug: false
 
+serviceMonitor:
+  enabled: false
+  interval: 60s
+  scrapeTimeout: 20s
+
 # for demo purposes and mostly otherwise, a container with unbound in the same pod
 # if you disable this, you have to configure your own resolver
 unbound:
