@@ -8,11 +8,11 @@ Should you accept this mission, your task is to scrape `/metrics` using Promethe
 
 **This is (still) pretty early software. But I happily accept all kinds of feedback - bug reports, PRs, code, docs, ... :)**
 
-## Using
+## Usage
 
 ### Configuration
 
-See `rbls.ini` and `targets.ini` files in this repository. The files follow the Nagios format as this exporter is meant to be a drop-in replacement so you can factor out Nagios, one (simple) step at a time. :-)
+See `rbls.ini` and `targets.ini` files in this repository. The files follow the Nagios format as this exporter is meant to be a drop-in replacement so you can factor out Nagios, one (simple) step at a time. 😊
 
 Otherwise:
 
@@ -31,7 +31,19 @@ $ dnsbl-exporter -h
 --version, -V                Print the version information.
 ```
 
-### Running
+#### System resolver
+Resolver can use **first** system resolver from `/etc/resolv.conf` automatically, for this you need set `dns-resolver` to `system`.
+Note that exporter should have read permissions to `/etc/resolv.conf` file for this feature to work.
+
+Configure resolver as an argument:
+- `--config.dns-resolver=system`
+
+Configure resolver as an environment variable:
+- `DNSBL_EXP_RESOLVER=system`
+
+### Deployment options
+
+#### Standalone binary
 
  1. Go to [release](https://github.com/Luzilla/dnsbl_exporter/releases) and grab a release for your platform.
  1. Get `rbls.ini` and put it next to the binary.
@@ -39,6 +51,8 @@ $ dnsbl-exporter -h
  1. `./dnsbl-exporter`
 
  Go to `http://127.0.0.1:9211/` in your browser.
+
+ As option you can configure exporter to run as systemd service.
 
 #### Container
 
@@ -81,7 +95,15 @@ Additionally, a helm chart is provided to run the exporter on Kubernetes.
 
 To get started quickly, an unbound container is installed into the pod alongside the exporter. This unbound acts as a local DNS server to send queries to. You may turn this off with `unbound.enabled=false` and provide your own resolver (via `config.resolver: an.ip.address:port`).
 
-To configure the chart, copy [`chart/values.yaml`](chart/values.yaml) to `values.local.yaml` and edit the file; for example, to turn off the included unbound and to supply your own resolver, set your own images and last but not least: supply your own _targets_ and RBLs. 
+To configure the chart, copy [`chart/values.yaml`](chart/values.yaml) to `values.local.yaml`; for example, to turn off the included unbound and to supply your own resolver, set your own images and last but not least: supply your own _targets_ and RBLs.
+
+Another useful option for advanced users is to add chart as dependency for your chart which allows you to add inplace resources as part of one release:
+```
+dependencies:
+  - name: dnsbl-exporter
+    repository: oci://ghcr.io/luzilla/charts
+    version: 0.1.0
+```
 
 The sources for the helm chart are in [chart](./chart/), to install it, you can inspect the `Chart.yaml` for the version, check the [helm chart repository](https://github.com/orgs/Luzilla/packages/container/package/charts%2Fdnsbl-exporter) or check out [artifact hub](https://artifacthub.io/packages/helm/luzilla/dnsbl-exporter).
 
@@ -95,7 +117,7 @@ helm upgrade --install \
     dnsbl-exporter oci://ghcr.io/luzilla/charts/dnsbl-exporter --version 0.1.0
 ```
 
-#### Querying
+### Metrics returned by exporter
 
 The individual configured servers and their status are represented by a **gauge**:
 
@@ -110,11 +132,141 @@ If the exporter is configured for DNS based blocklists, the ip label represents 
 
 If you happen to be listed — inspect the exporter's logs as they will contain a reason.
 
-#### Alerting
+### Exporter operation modes
+
+Exporter can work in 2 modes:
+* classic - when targets described in `targets.ini` and `/metrics` endpoint is used to recieve metrics for all targets.
+* prober - when targets described on Prometheus side and `/prober&target=` is used. To use this mode `targets.ini` should be empty.
+
+Prober mode provides more advantages over classic mode because of:
+1. dynamic configuration of targets on Prometheus side without redeploying/reconfiguring exporter itself.
+1. ability to have different interval of queries for different targets, useful when some DNSBL have more strict rate limits then others.
+1. ability to set different query settings by utilizing probes modules (not yet implemented).
+
+#### classic
+
+The following example configure scraping of metrics from this exporter in classic mode.
+
+##### Prometheus
+
+```yaml
+scrape_configs:
+  - job_name: 'dnsbl-exporter'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['127.0.0.1:9211']
+```
+
+For more details, see the [Prometheus scrape config documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config).
+
+##### Prometheus Operator
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dnsbl-exporter
+  namespace: dnsbl-exporter
+spec:
+  endpoints:
+    - interval: 30s
+      port: http-9211
+      scrapeTimeout: 5s
+  jobLabel: dnsbl-exporter
+  namespaceSelector:
+    matchNames:
+      - dnsbl-exporter
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: dnsbl-exporter
+      app.kubernetes.io/name: dnsbl-exporter
+```
+
+You can use ServiceMonitor or PodMonitor, for more details, see the [Operator ServiceMonitor documentation](https://prometheus-operator.dev/docs/operator/design/#servicemonitor) or [Operator PodMonitor documentation](https://prometheus-operator.dev/docs/operator/design/#podmonitor).
+
+#### prober
+
+The following example configure scraping of metrics from this exporter in prober mode.
+
+##### Prometheus
+
+```yaml
+scrape_configs:
+  - job_name: 'dnsbl-exporter-prober'
+    metrics_path: /probe
+    params:
+      module: [ips]
+    static_configs:
+      - targets:
+        - 192.0.2.1
+        - 192.0.2.2
+        - 192.0.2.3
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9211 # The dnsbl exporter's real hostname:port.
+  - job_name: 'dnsbl-exporter-metrics' # collect dnsbl exporter's operational metrics.
+    static_configs:
+      - targets: ['127.0.0.1:9211']
+```
+
+For more details, see the [Prometheus scrape config documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config).
+
+##### Prometheus Operator
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: dnsbl-exporter-prober
+  namespace: dnsbl-exporter
+spec:
+  interval: 30s
+  jobName: dnsbl-exporter-prober
+  module: ips
+  prober:
+    path: /prober
+    scheme: http
+    url: dnsbl-exporter.dnsbl-exporter.svc:9211 # Kubernetes dnsbl exporter's service
+  scrapeTimeout: 5s
+  targets:
+    staticConfig:
+      static:
+        - 192.0.2.1
+        - 192.0.2.2
+        - 192.0.2.3
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dnsbl-exporter-metrics # collect dnsbl exporter's operational metrics.
+  namespace: dnsbl-exporter
+spec:
+  endpoints:
+    - interval: 30s
+      port: http-9211
+      scrapeTimeout: 5s
+  jobLabel: dnsbl-exporter-metrics
+  namespaceSelector:
+    matchNames:
+      - dnsbl-exporter
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: dnsbl-exporter
+      app.kubernetes.io/name: dnsbl-exporter
+```
+
+For more details, see the [Operator Probe documentation](https://prometheus-operator.dev/docs/operator/design/#probe).
+You can use ServiceMonitor or PodMonitor to monitor exporter's operation metrics, for more details, see the [Operator ServiceMonitor documentation](https://prometheus-operator.dev/docs/operator/design/#servicemonitor) or [Operator PodMonitor documentation](https://prometheus-operator.dev/docs/operator/design/#podmonitor).
+
+### Alerting
 
 The following example alerts use the scraped metrics from this exporter.
 
-##### prometheus
+#### prometheus
 
 ```yaml
 alerts:
@@ -127,14 +279,14 @@ alerts:
       labels:
         severity: critical
       annotations:
-        description: Domain {{ $labels.hostname }} ({{ $labels.ip }}) listed at {{ $labels.rbl }}
-        summary: Domain listed at RBL
+        description: {{ $labels.hostname }} ({{ $labels.ip }}) has been blacklisted in {{ $labels.rbl }} for more than 15 minutes.
+        summary: Endpoint {{ $labels.hostname }} is blacklisted
         runbook_url: https://example.org/wiki/runbooks
 ```
 
-For more details, see the [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/).
+For more details, see the [Prometheus Alerting documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/).
 
-##### Prometheus Operator
+#### Prometheus Operator
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
@@ -143,7 +295,7 @@ metadata:
   name: dnsbl-rules
 spec:
   groups:
-  - name: dnsbl
+  - name: dnsbl-exporter
     rules:
       - alert: DnsblRblListed
         expr: luzilla_rbls_ips_blacklisted > 0
@@ -151,22 +303,23 @@ spec:
         labels:
           severity: critical
         annotations:
-          description: '{{ $labels.hostname }} ({{ $labels.ip }}) has been blacklisted in {{ $labels.rbl }} for more than 15 minutes.'
-          summary: 'Endpoint {{ $labels.hostname }} is blacklisted'
+          description: {{ $labels.hostname }} ({{ $labels.ip }}) has been blacklisted in {{ $labels.rbl }} for more than 15 minutes.
+          summary: Endpoint {{ $labels.hostname }} is blacklisted
+          runbook_url: https://example.org/wiki/runbooks
 ```
 
-For more details, see the [Prometheus Operator documentation](https://prometheus-operator.dev/docs/user-guides/alerting/).
+For more details, see the [Operator Alertring documentation](https://prometheus-operator.dev/docs/user-guides/alerting/).
 
-#### Dashboard
+### DNS requirements
 
-A dashboard and example screenshot can be found in [contrib](contrib). You may also download it from [grafana.com](https://grafana.com/grafana/dashboards/20966-dnsbl-exporter-dashboard/), `id: 20966`.
+In order to use the dnsbl exporter, you need use DNS resolver which speaks with authorative NS of RBLs directly, as each RBL has limitation on amount of requests originating from resolver IP.
+Using public resolvers like Google, Cloudflare, OpenDNS, Quad9 etc. will result in facing this limitations, as result no proper monitoring can be done.
 
-### Caveat
+Our recomendation is to use resolver like [Unbound](https://github.com/NLnetLabs/unbound) without forwarding, which means you will use root NS.
 
-In order to use the exporter, a _proper_ DNS resolver is needed. Proper means: not Google, not Cloudflare, nor OpenDNS or Quad9 etc..
-Instead use a resolver like [Unbound](https://github.com/NLnetLabs/unbound) and turn off forwarding.
+Exclusion: if you have local copy (mirror) of RBL zone synced over rsync or other channels you can configure local rbldnsd to serve this zone and point Unbound to forward exactly this zone to your's rbldnsd.
 
-To test on OSX, follow these steps:
+To install unbound on OSX, follow these steps:
 
 ```sh
 $ brew install unbound
@@ -190,22 +343,13 @@ Verify Unbound is working and resolution is working:
 192.42.118.104
 ```
 
-### Use /etc/resolv.conf
-
-Use `system` as a value and the exporter will pick the **first** resolver from `/etc/resolv.conf`.
-
-Adequate permissions need to be set by yourself so the exporter can read the file.
-
-- `--config.dns-resolver=system`
-- `DNSBL_EXP_RESOLVER=system`
-
 ## License / Author
 
 This code is Apache 2.0 licensed.
 
 For questions, comments or anything else, [please get in touch](https://www.luzilla-capital.com).
 
-## Releasing
+## Releasing new versions
 
 (This is for myself, since I tend to forget things.)
 
