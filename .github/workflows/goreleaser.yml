@@ -27,7 +27,7 @@ jobs:
           type=ref,event=branch
           type=ref,event=pr
           type=semver,pattern={{raw}}
-    - uses: docker/build-push-action@v5
+    - uses: docker/build-push-action@v6
       with:
         context: .docker/unbound/rootfs
         push: true
