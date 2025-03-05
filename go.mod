@@ -9,7 +9,7 @@ require (
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/miekg/dns v1.1.63
 	github.com/stretchr/testify v1.10.0
-	github.com/urfave/cli/v2 v2.27.5
+	github.com/urfave/cli/v2 v2.27.6
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 	gopkg.in/ini.v1 v1.67.0
 )
