@@ -1,6 +1,9 @@
 package collector
 
 import (
+	"encoding/binary"
+	"net"
+	"slices"
 	"sync"
 	"time"
 
@@ -30,6 +33,50 @@ type RblCollector struct {
 
 func BuildFQName(metric string) string {
 	return prometheus.BuildFQName(namespace, subsystem, metric)
+}
+
+func getIPsFromCIDR(ipv4Net *net.IPNet) []string {
+	// Convert IPNet struct mask and address to uint32
+	// Network is BigEndian
+	mask := binary.BigEndian.Uint32(ipv4Net.Mask)
+	start := binary.BigEndian.Uint32(ipv4Net.IP)
+
+	// Calculate the final address (broadcast address)
+	finish := (start & mask) | (mask ^ 0xffffffff)
+
+	ips := make([]string, 0, finish-start+1)
+	// Loop through addresses as uint32
+	for i := start; i <= finish; i++ {
+		// Convert back to net.IP
+		ip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, i)
+		ips = append(ips, ip.String())
+	}
+
+	return ips
+}
+
+func expandCIDRs(hosts []string) []string {
+	var newHosts []string
+
+	for _, host := range hosts {
+		// If it's a CIDR
+		if _, ipNet, err := net.ParseCIDR(host); err == nil {
+			for _, ip := range getIPsFromCIDR(ipNet) {
+				// Only add IP to slice if it doesn't already exist
+				if !slices.Contains(newHosts, ip) {
+					newHosts = append(newHosts, ip)
+				}
+			}
+		} else {
+			// If it's not a CIDR, just check and add the host itself
+			if !slices.Contains(newHosts, host) {
+				newHosts = append(newHosts, host)
+			}
+		}
+	}
+
+	return newHosts
 }
 
 // NewRblCollector ... creates the collector
@@ -92,7 +139,7 @@ func (c *RblCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect ...
 func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 	// these are our targets to check
-	hosts := c.targets
+	hosts := expandCIDRs(c.targets)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.configuredMetric,
