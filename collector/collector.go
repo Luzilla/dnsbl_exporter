@@ -56,9 +56,7 @@ func getIPsFromCIDR(ipv4Net *net.IPNet) []string {
 	return ips
 }
 
-func expandCIDRs(hosts []string) []string {
-	var newHosts []string
-
+func expandCIDRs(hosts []string) (newHosts []string) {
 	for _, host := range hosts {
 		// If it's a CIDR
 		if _, ipNet, err := net.ParseCIDR(host); err == nil {
@@ -76,7 +74,7 @@ func expandCIDRs(hosts []string) []string {
 		}
 	}
 
-	return newHosts
+	return
 }
 
 // NewRblCollector ... creates the collector
