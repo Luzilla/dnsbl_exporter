@@ -39,8 +39,6 @@ func TestCollectorSuite(t *testing.T) {
 		expected := `
       # HELP luzilla_rbls_ips_blacklisted Blacklisted IPs
       # TYPE luzilla_rbls_ips_blacklisted gauge
-      luzilla_rbls_ips_blacklisted{hostname="1.3.3.4",ip="1.3.3.4",rbl="cbl.abuseat.org"} 0
-      luzilla_rbls_ips_blacklisted{hostname="1.3.3.4",ip="1.3.3.4",rbl="zen.spamhaus.org"} 0
       luzilla_rbls_ips_blacklisted{hostname="1.3.3.5",ip="1.3.3.5",rbl="cbl.abuseat.org"} 0
       luzilla_rbls_ips_blacklisted{hostname="1.3.3.5",ip="1.3.3.5",rbl="zen.spamhaus.org"} 0
       luzilla_rbls_ips_blacklisted{hostname="1.3.3.6",ip="1.3.3.6",rbl="cbl.abuseat.org"} 0
@@ -57,7 +55,7 @@ func TestCollectorSuite(t *testing.T) {
       luzilla_rbls_listed{rbl="zen.spamhaus.org"} 1
       # HELP luzilla_rbls_targets The number of targets that are being probed (configured via targets.ini or ?target=)
       # TYPE luzilla_rbls_targets gauge
-      luzilla_rbls_targets 6
+      luzilla_rbls_targets 5
       # HELP luzilla_rbls_used The number of RBLs to check IPs against (configured via rbls.ini)
       # TYPE luzilla_rbls_used gauge
       luzilla_rbls_used 2

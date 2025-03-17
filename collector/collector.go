@@ -36,18 +36,17 @@ func BuildFQName(metric string) string {
 }
 
 func getIPsFromCIDR(ipv4Net *net.IPNet) []string {
-	// Convert IPNet struct mask and address to uint32
-	// Network is BigEndian
+	// Convert IPNet mask and IP address to uint32
 	mask := binary.BigEndian.Uint32(ipv4Net.Mask)
 	start := binary.BigEndian.Uint32(ipv4Net.IP)
 
-	// Calculate the final address (broadcast address)
-	finish := (start & mask) | (mask ^ 0xffffffff)
+	// Compute the correct network and broadcast addresses
+	network := start & mask      // Network address (e.g., 1.2.3.0)
+	broadcast := network | ^mask // Broadcast address (e.g., 1.2.3.255)
 
-	ips := make([]string, 0, finish-start+1)
-	// Loop through addresses as uint32
-	for i := start; i <= finish; i++ {
-		// Convert back to net.IP
+	// Exclude network and broadcast addresses
+	ips := make([]string, 0, broadcast-network-1)
+	for i := network + 1; i < broadcast; i++ {
 		ip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(ip, i)
 		ips = append(ips, ip.String())
