@@ -2,6 +2,10 @@ name: golangci-lint
 on:
   pull_request:
 
+concurrency:
+  group: golangci-lint-${{ github.event.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   # Optional: allow read access to pull request. Use with `only-new-issues` option.

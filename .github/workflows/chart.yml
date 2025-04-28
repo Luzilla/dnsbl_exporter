@@ -3,6 +3,10 @@ name: chart
 on:
   pull_request:
 
+concurrency:
+  group: chart-${{ github.event.number }}
+  cancel-in-progress: true
+
 jobs:
   helm:
     runs-on: ubuntu-latest

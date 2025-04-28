@@ -3,6 +3,10 @@ name: integration
 on:
   pull_request:
 
+concurrency:
+  group: integration-${{ github.event.number }}
+  cancel-in-progress: true
+
 jobs:
   snapshot:
     runs-on: ubuntu-latest
