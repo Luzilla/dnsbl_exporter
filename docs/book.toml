@@ -1,0 +1,5 @@
+[book]
+authors = ["Till Klampaeckel"]
+language = "en"
+src = "src"
+title = "dnsbl-exporter"
