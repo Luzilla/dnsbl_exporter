@@ -10,15 +10,29 @@ Exporter can work in 2 modes:
   * `/prober&target=` is used
   * `targets.ini` should be empty
 
-Prober mode provides more advantages over classic mode because of:
+Each operation mode requires an `rbl.ini`, for example:
 
-1. dynamic configuration of targets on Prometheus side without redeploying/reconfiguring exporter itself.
-1. ability to have different interval of queries for different targets, useful when some DNSBL have more strict rate limits then others.
-1. ability to set different query settings by utilizing probes modules (not yet implemented).
+```ini
+[rbl]
+server=ix.dnsbl.manitu.net
+```
+
+Prober mode provides additional features over classic:
+
+ 1. dynamic configuration of targets on Prometheus side
+ 1. different query/check interval of queries for different targets (e.g. to work around strict rate limits of the DNSBL)
+ 1. ~~set different query settings by utilizing probes modules~~ (not yet implemented)
 
 ## classic
 
-The following example configure scraping of metrics from this exporter in classic mode.
+The following examples configure scraping of metrics from this exporter in classic mode.
+
+Example for a `targets.ini`:
+
+```ini
+[targets]
+server=smtp.fastmail.com
+```
 
 ### Prometheus
 
@@ -59,21 +73,19 @@ You can use a `ServiceMonitor` or `PodMonitor`, for more details, see the [Opera
 
 ## prober
 
-The following example configure scraping of metrics from this exporter in prober mode.
+The following examples configure scraping of metrics from this exporter in prober mode.
 
 ### Prometheus
 
 ```yaml
 scrape_configs:
   - job_name: 'dnsbl-exporter-prober'
-    metrics_path: /probe
+    metrics_path: /prober
     params:
       module: [ips]
     static_configs:
       - targets:
-        - 192.0.2.1
-        - 192.0.2.2
-        - 192.0.2.3
+        - smtp.fastmail.com
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -108,9 +120,7 @@ spec:
   targets:
     staticConfig:
       static:
-        - 192.0.2.1
-        - 192.0.2.2
-        - 192.0.2.3
+        - smtp.fastmail.com
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -134,4 +144,4 @@ spec:
 
 For more details, see the [Operator Probe documentation](https://prometheus-operator.dev/docs/operator/design/#probe).
 
-In addition, you can use a `ServiceMonitor` or `PodMonitor` to monitor the `dnsbl_exporter`'s operational metrics, for more details, see the [Operator ServiceMonitor documentation](https://prometheus-operator.dev/docs/operator/design/#servicemonitor) or [Operator PodMonitor documentation](https://prometheus-operator.dev/docs/operator/design/#podmonitor).
+> In addition, you can use a `ServiceMonitor` or `PodMonitor` to monitor the `dnsbl-exporter`'s operational metrics, for more details, see the [Operator ServiceMonitor documentation](https://prometheus-operator.dev/docs/operator/design/#servicemonitor) or [Operator PodMonitor documentation](https://prometheus-operator.dev/docs/operator/design/#podmonitor).
