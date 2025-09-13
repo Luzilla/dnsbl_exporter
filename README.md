@@ -23,6 +23,7 @@ For questions, comments or anything else, [please get in touch](https://www.luzi
 
 (This is for myself, since I tend to forget things.)
 
+ 1. bump versions in [`chart/Chart.yaml`](./chart/Chart.yaml)
  1. `git tag -a x.y.z`
  1. `git push --tags`
  1. GitHub Actions/GoReleaser will build a pretty release
