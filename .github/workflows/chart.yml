@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
-    - uses: yokawasa/action-setup-kube-tools@v0.13.0
+    - uses: yokawasa/action-setup-kube-tools@v0.13.1
       with:
         setup-tools: |
           helm
