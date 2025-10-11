@@ -4,6 +4,7 @@ project_name: dnsbl_exporter
 before:
   hooks:
     - go mod tidy
+    - go mod verify
 builds:
 - main: ./dnsbl_exporter.go
   binary: dnsbl-exporter
@@ -18,7 +19,7 @@ builds:
 dockers:
 - image_templates:
   - 'ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-amd64'
-  dockerfile: Dockerfile
+  dockerfile: .docker/dnsbl-exporter/Dockerfile
   use: buildx
   build_flag_templates:
   - "--pull"
@@ -35,7 +36,7 @@ dockers:
   goos: linux
 - image_templates:
   - 'ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-arm64'
-  dockerfile: Dockerfile
+  dockerfile: .docker/dnsbl-exporter/Dockerfile
   use: buildx
   build_flag_templates:
   - "--pull"
