@@ -5,6 +5,7 @@ before:
   hooks:
     - go mod tidy
     - go mod verify
+    - helm package chart/
 builds:
 - main: ./dnsbl_exporter.go
   binary: dnsbl-exporter
@@ -59,6 +60,9 @@ docker_manifests:
 archives:
 - files:
   - none*
+release:
+  extra_files:
+  - glob: ./dnsbl-exporter-*.tgz
 checksum:
   name_template: 'checksums.txt'
 snapshot:
