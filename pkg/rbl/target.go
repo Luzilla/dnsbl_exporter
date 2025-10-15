@@ -31,7 +31,7 @@ func (r *Resolver) Do(target string, c chan<- Target, done func()) {
 	addr := net.ParseIP(target)
 	if addr != nil {
 		// already an IP
-		r.logger.Info("we had an ip already", slog.String("ip", target))
+		r.logger.Debug("we had an ip already", slog.String("ip", target))
 		c <- Target{
 			Host: target,
 			IP:   addr,
