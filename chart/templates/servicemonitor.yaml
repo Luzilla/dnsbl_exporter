@@ -15,8 +15,8 @@ spec:
   - port: svc-9211
     scheme: "http"
     path: "/metrics"
-    interval: {{ .interval }}
-    scrapeTimeout: {{ .scrapeTimeout }}
+    interval: {{ .Values.serviceMonitor.interval }}
+    scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
   jobLabel: "{{ template "dnsbl-exporter.fullname" $ }}"
   selector:
     matchLabels:
