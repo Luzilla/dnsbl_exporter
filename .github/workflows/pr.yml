@@ -68,3 +68,31 @@ jobs:
       with:
         version: '~> v2'
         args: release --snapshot --clean
+
+  freebsd:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version:
+          - "15.0"
+          - "14.3"
+    steps:
+    - uses: actions/checkout@v6
+    - id: test
+      uses: vmactions/freebsd-vm@v1.3.0
+      with:
+        release: ${{ matrix.version }}
+        copyback: false
+        sync: no
+        run: uname -a
+    - name: install build dependencies
+      shell: freebsd {0}
+      run: pkg install -y lang/go git-lite devel/goreleaser sysutils/helm
+    - name: download source
+      shell: freebsd {0}
+      run: git clone https://github.com/${{ github.repository }}
+    - name: build
+      shell: freebsd {0}
+      run: cd dnsbl_exporter && goreleaser build --single-target --snapshot --clean
+    - shell: freebsd {0}
+      run: cd dnsbl_exporter && ./dist/dnsbl_exporter_freebsd_amd64_v1/dnsbl-exporter -h
