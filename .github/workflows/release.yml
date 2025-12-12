@@ -73,7 +73,7 @@ jobs:
         setup-tools: |
           helm
     - run: |
-        echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+        echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
     - run: |
         helm package chart/
         helm push dnsbl-exporter-*.tgz oci://ghcr.io/luzilla/charts
