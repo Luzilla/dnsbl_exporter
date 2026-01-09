@@ -79,7 +79,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - id: test
-      uses: vmactions/freebsd-vm@v1.3.4
+      uses: vmactions/freebsd-vm@v1.3.6
       with:
         release: ${{ matrix.version }}
         copyback: false
