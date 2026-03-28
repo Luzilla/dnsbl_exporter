@@ -7,48 +7,58 @@ concurrency:
   group: integration-${{ github.event.number }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       with:
         fetch-depth: 0
+        persist-credentials: false
     - name: Set up Go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
       with:
         go-version-file: go.mod
         cache: false
     - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@v7
+      uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7
       with:
         version: '~> v2'
         args: release --clean --snapshot
     - name: Copy .ini files
       run: cp targets.ini rbls.ini ./dist/dnsbl_exporter_linux_amd64_v1
     - name: Upload artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
       with:
         name: dnsbl_exporter
         path: dist/dnsbl_exporter_linux_amd64_v1
 
   integration:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     needs:
     - snapshot
     services:
       unbound:
-        image: klutchell/unbound:latest
+        image: ghcr.io/luzilla/unbound:v0.10.0
         ports:
         - 5053:5053/tcp
         - 5053:5053/udp
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       with:
         fetch-depth: 0
+        persist-credentials: false
     - name: Download artifact
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
       with:
         name: dnsbl_exporter
         path: ./dist/dnsbl_exporter_linux_amd64_v1
