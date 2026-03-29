@@ -2,8 +2,8 @@ apiVersion: v2
 name: dnsbl-exporter
 description: A Helm chart to run dnsbl-exporter on Kubernetes
 type: application
-version: 0.3.0
-appVersion: "v0.10.0"
+version: 0.4.0
+appVersion: "v0.11.0"
 home: https://github.com/Luzilla/dnsbl_exporter
 sources:
   - https://github.com/Luzilla/dnsbl_exporter
@@ -15,6 +15,7 @@ keywords:
   - mail
   - smtp
   - monitoring
+  - email
 maintainers:
   - name: Till Klampaeckel
     url: https://github.com/till
