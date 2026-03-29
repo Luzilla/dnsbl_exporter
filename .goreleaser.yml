@@ -7,7 +7,8 @@ before:
     - go mod verify
     - helm package chart/
 builds:
-- main: ./dnsbl_exporter.go
+- id: dnsbl_exporter
+  main: ./dnsbl_exporter.go
   binary: dnsbl-exporter
   ldflags: -s -w -X main.exporterVersion={{.Version}}
   goos:
@@ -17,46 +18,26 @@ builds:
   - windows
   env:
   - CGO_ENABLED=0
-dockers:
-- image_templates:
-  - 'ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-amd64'
-  dockerfile: .docker/dnsbl-exporter/Dockerfile
-  use: buildx
-  build_flag_templates:
-  - "--pull"
-  - "--label=org.opencontainers.image.created={{.Date}}"
-  - "--label=org.opencontainers.image.name={{.ProjectName}}"
-  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-  - "--label=org.opencontainers.image.version={{.Version}}"
-  - "--label=org.opencontainers.image.source={{.GitURL}}"
-  - "--platform=linux/amd64"
-  extra_files:
-  - rbls.ini
-  - targets.ini
-  goarch: amd64
-  goos: linux
-- image_templates:
-  - 'ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-arm64'
-  dockerfile: .docker/dnsbl-exporter/Dockerfile
-  use: buildx
-  build_flag_templates:
-  - "--pull"
-  - "--label=org.opencontainers.image.created={{.Date}}"
-  - "--label=org.opencontainers.image.name={{.ProjectName}}"
-  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-  - "--label=org.opencontainers.image.version={{.Version}}"
-  - "--label=org.opencontainers.image.source={{.GitURL}}"
-  - "--platform=linux/arm64"
-  extra_files:
-  - rbls.ini
-  - targets.ini
-  goarch: arm64
-  goos: linux
-docker_manifests:
-- name_template: ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}
-  image_templates:
-  - ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-amd64
-  - ghcr.io/luzilla/{{.ProjectName}}:{{ .Tag }}-arm64
+dockers_v2:
+  - id: docker
+    dockerfile: .docker/dnsbl-exporter/Dockerfile
+    ids: [dnsbl_exporter]
+    images:
+      - ghcr.io/luzilla/{{.ProjectName}}
+    tags:
+      - "{{.Tag}}"
+    labels:
+      "org.opencontainers.image.created": "{{.Date}}"
+      "org.opencontainers.image.name": "{{.ProjectName}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+      "org.opencontainers.image.source": "{{.GitURL}}"
+    extra_files:
+      - rbls.ini
+      - targets.ini
+    platforms:
+      - linux/amd64
+      - linux/arm64
 archives:
 - files:
   - none*
