@@ -44,7 +44,7 @@ jobs:
         push: true
         tags: ${{ steps.image.outputs.name }}
     - if: github.event.pull_request.head.repo.full_name == github.repository
-      uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -102,7 +102,7 @@ jobs:
       with:
         persist-credentials: false
     - id: test
-      uses: vmactions/freebsd-vm@4807432c7cab1c3f97688665332c0b932062d31f # v1.4.3
+      uses: vmactions/freebsd-vm@7ca82f79fe3078fecded6d3a2bff094995447bbd # v1.4.4
       with:
         release: ${{ matrix.version }}
         copyback: false
