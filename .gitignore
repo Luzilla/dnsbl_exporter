@@ -1,3 +1,4 @@
-dist
-vendor
-.envrc
+/dist
+/out
+/vendor
+/.envrc
