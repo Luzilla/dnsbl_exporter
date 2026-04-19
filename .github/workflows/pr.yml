@@ -163,7 +163,6 @@ jobs:
             arch: amd64
           - runner: ubuntu-24.04-arm
             arch: arm64
-
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -190,6 +189,58 @@ jobs:
           test -f /etc/dnsbl-exporter/rbls.ini
           test -f /etc/dnsbl-exporter/rbls-domain.ini
           test -f /etc/dnsbl-exporter/targets.ini
+
+  integration:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs:
+      - release_test
+    services:
+      unbound:
+        image: ghcr.io/luzilla/unbound:v0.10.0
+        ports:
+        - 5053:5053/tcp
+        - 5053:5053/udp
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      with:
+        persist-credentials: false
+    - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      with:
+        name: dist
+        path: ./dist/
+    - run: ls -R ./dist
+    - env:
+        BINARY: ./dist/dnsbl_exporter_linux_amd64_v1/dnsbl-exporter
+      run: |
+        chmod +x ${BINARY}
+        ${BINARY} \
+          --log.debug \
+          --config.dns-resolver=localhost:5053 > dnsbl.log 2>&1 &
+        echo $! > dnsbl_exporter.pid
+
+        pid=`cat dnsbl_exporter.pid`
+        echo "✅ started dnsbl-exporter: ${pid}" >> $GITHUB_STEP_SUMMARY
+    - run: |
+        timeout 60 bash -c 'until curl -f http://localhost:9211/; do sleep 1; done'
+        echo "✅ dnsbl-exporter has started" >> $GITHUB_STEP_SUMMARY
+    - name: test metrics
+      run: |
+        timeout 10 curl -f http://localhost:9211/metrics
+    - name: test prober
+      run: |
+        timeout 10 curl -f http://localhost:9211/prober?target=github.com
+    - name: Show logs if failed
+      if: failure()
+      run: |
+        echo "=== dnsbl-exporter logs ==="
+        cat dnsbl.log || echo "No log file found"
+    - if: always()
+      run: |
+        if [ -f dnsbl_exporter.pid ]; then
+          kill $(cat dnsbl_exporter.pid) || true
+        fi
 
   freebsd:
     needs:
