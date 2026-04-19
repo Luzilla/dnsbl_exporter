@@ -1,0 +1,76 @@
+name: 'run-dalec'
+description: 'An action to run and orchestrate dalec (with goreleaser builds)'
+inputs:
+  target:
+    description: 'Target'
+    required: true
+  version:
+    description: 'Version'
+    required: true
+  build-directory:
+    description: 'Build directory from goreleaser'
+    required: false
+    default: './dist'
+  output-path:
+    description: 'Output'
+    required: false
+    default: './out'
+outputs:
+  artifact:
+    description: 'Artifact produced (.rpm, .deb or .raw)'
+    value: ${{ steps.artifact-name.outputs.value }}
+  output-path:
+    description: 'Output path'
+    value: ${{ inputs.output-path }}
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        DIST: ${{ inputs.build-directory }}
+      run: |
+        if [ ! -d "${DIST}" ]; then
+          echo "Missing goreleaser directory"
+          exit 1
+        fi
+    - id: arch
+      shell: bash
+      env:
+        DIST: ${{ inputs.build-directory }}
+      run: |
+        goarch=$(dpkg --print-architecture)
+        binary_path=$(jq -r --arg a "$goarch" \
+          '.[] | select(.type=="Binary" and .goos=="linux" and .goarch==$a) | .path' \
+          ${DIST}/artifacts.json)
+        if [ -z "$binary_path" ]; then
+          echo "no linux/${goarch} binary in ${DIST}/artifacts.json" >&2
+          exit 1
+        fi
+        binary_dir="$(dirname "$binary_path")/"
+        echo "goarch=$goarch" >> "$GITHUB_OUTPUT"
+        echo "binary-path=$binary_dir" >> "$GITHUB_OUTPUT"
+    - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+    - uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+      with:
+        context: .
+        file: ./.dalec/dalec.yml
+        target: ${{ inputs.target }}
+        build-args: |
+          VERSION=${{ inputs.version }}
+          BINARY_PATH=${{ steps.arch.outputs.binary-path }}
+        outputs: type=local,dest=${{ inputs.output-path }}
+      env:
+        DOCKER_BUILD_SUMMARY: false
+        DOCKER_BUILD_RECORD_UPLOAD: false
+    - id: artifact-name
+      env:
+        OUT: ${{ inputs.output-path }}
+      shell: bash
+      run: |
+        name=$(find ${OUT} -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.raw' \) ! -name '*.src.rpm' -printf '%f\n' | head -1)
+        if [ -z "$name" ]; then
+          echo "no package file found in ${OUT}" >&2
+          ls -la ${OUT} >&2
+          exit 1
+        fi
+        echo "value=$name" >> $GITHUB_OUTPUT

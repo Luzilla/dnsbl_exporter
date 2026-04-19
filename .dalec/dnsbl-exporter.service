@@ -1,0 +1,30 @@
+[Unit]
+Description=DNSBL Prometheus Exporter
+Documentation=https://github.com/Luzilla/dnsbl_exporter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dnsbl-exporter
+Group=dnsbl-exporter
+ExecStart=/usr/bin/dnsbl-exporter \
+    --config.rbls=/etc/dnsbl-exporter/rbls.ini \
+    --config.targets=/etc/dnsbl-exporter/targets.ini
+Restart=on-failure
+RestartSec=5s
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ReadOnlyPaths=/
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

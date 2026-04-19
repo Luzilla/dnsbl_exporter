@@ -1,0 +1,130 @@
+# syntax=ghcr.io/azure/dalec/frontend:latest
+# yaml-language-server: $schema=https://raw.githubusercontent.com/project-dalec/dalec/v0.20.5/docs/spec.schema.json
+#
+# Unified Dalec spec for dnsbl-exporter
+# Supports RPM, DEB, and sysext output formats
+#
+# Build commands (ARCH_DIR: amd64_v1, arm64_v8.0):
+#   RPM:    docker build -f .dalec/dalec.yml --target=mariner2/rpm --build-arg VERSION=x.y.z --build-arg ARCH_DIR=amd64_v1 -o type=local,dest=./out .
+#   DEB:    docker build -f .dalec/dalec.yml --target=jammy/deb --build-arg VERSION=x.y.z --build-arg ARCH_DIR=amd64_v1 -o type=local,dest=./out .
+#   sysext: docker build -f .dalec/dalec.yml --target=azlinux3/testing/sysext --build-arg VERSION=x.y.z --build-arg ARCH_DIR=amd64_v1 -o type=local,dest=./out .
+#
+# Prerequisites:
+#   Run `goreleaser build --snapshot --clean` first to populate the dist/ directory
+#
+name: dnsbl-exporter
+version: ${VERSION}
+revision: "1"
+license: Apache-2.0
+vendor: Luzilla Capital GmbH
+packager: Luzilla Capital GmbH
+website: https://github.com/Luzilla/dnsbl_exporter
+description: Prometheus exporter for DNSBL (DNS-based Blackhole Lists). Monitors if your IPs or domains are listed on various DNSBLs.
+
+args:
+  VERSION: "0.0.0"
+  # Path to the prebuilt binary inside the build context (as emitted by GoReleaser).
+  BINARY_PATH: "dist/dnsbl_exporter_linux_arm64_v8.0/"
+
+sources:
+  goreleaser:
+    context: {}
+    path: ${BINARY_PATH}
+  service:
+    context: {}
+    path: .dalec/dnsbl-exporter.service
+  config:
+    context: {}
+    includes:
+      - rbls.ini
+      - rbls-domain.ini
+      - targets.ini
+
+artifacts:
+  groups:
+    - name: dnsbl-exporter
+  users:
+    - name: dnsbl-exporter
+  binaries:
+    goreleaser/dnsbl-exporter:
+      subpath: ""
+      permissions: 0o755
+      user: dnsbl-exporter
+      group: dnsbl-exporter
+  createDirectories:
+    config:
+      dnsbl-exporter:
+        mode: 0o755
+        user: dnsbl-exporter
+        group: dnsbl-exporter
+  systemd:
+    units:
+      service/dnsbl-exporter.service:
+        name: ""
+        enable: true
+        start: false
+  configFiles:
+    config/rbls.ini:
+      subpath: dnsbl-exporter
+      permissions: 0o644
+      user: dnsbl-exporter
+      group: dnsbl-exporter
+    config/rbls-domain.ini:
+      subpath: dnsbl-exporter
+      permissions: 0o644
+      user: dnsbl-exporter
+      group: dnsbl-exporter
+    config/targets.ini:
+      subpath: dnsbl-exporter
+      permissions: 0o644
+      user: dnsbl-exporter
+      group: dnsbl-exporter
+
+targets:
+  mariner2:
+    dependencies:
+      runtime:
+        systemd: {}
+  jammy:
+    dependencies:
+      runtime:
+        systemd: {}
+  noble:
+    dependencies:
+      runtime:
+        systemd: {}
+  bookworm:
+    dependencies:
+      runtime:
+        systemd: {}
+
+tests:
+  - name: exporter files
+    files:
+      /usr/bin/dnsbl-exporter:
+      /etc/dnsbl-exporter:
+        is_dir: true
+      /etc/dnsbl-exporter/rbls.ini:
+        contains:
+          - '[rbl]'
+      /etc/dnsbl-exporter/rbls-domain.ini:
+      /etc/dnsbl-exporter/targets.ini:
+        contains:
+          - '[targets]'
+      /usr/lib/systemd/system/dnsbl-exporter.service:
+        starts_with: '[Unit]'
+        contains:
+          - 'Description=DNSBL'
+          - 'WantedBy='
+
+  - name: units
+    steps:
+      - command: /usr/bin/dnsbl-exporter -v
+      - command: ls -lah /etc/dnsbl-exporter/
+      - command: ls -lah /etc/dnsbl-exporter/rbls.ini
+      - command: ls -lah /etc/dnsbl-exporter/rbls-domain.ini
+      - command: ls -lah /etc/dnsbl-exporter/targets.ini
+      - command: ls -lah /usr/lib/systemd/system/dnsbl-exporter.service
+
+image:
+  entrypoint: /usr/bin/dnsbl-exporter
