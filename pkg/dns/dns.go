@@ -7,7 +7,7 @@ import (
 	"time"
 
 	x "github.com/miekg/dns"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 type DNSUtil struct {

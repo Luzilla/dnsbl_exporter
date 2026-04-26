@@ -5,7 +5,7 @@ import (
 
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 type Target struct {
@@ -41,7 +41,7 @@ func (r *Resolver) Do(target string, c chan<- Target, done func()) {
 
 	ipsA, err := r.util.GetARecords(target)
 	if err != nil {
-		r.logger.Error("error fetching A-records for target", slog.String("msg", err.Error()))
+		r.logger.Error("error fetching A-records for target", slog.Any("err", err))
 		return
 	}
 

@@ -6,7 +6,7 @@ import (
 	"github.com/Luzilla/dnsbl_exporter/internal/setup"
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 type ProberHandler struct {

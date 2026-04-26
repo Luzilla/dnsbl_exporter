@@ -3,7 +3,7 @@ package config
 import (
 	"errors"
 
-	"golang.org/x/exp/slog"
+	"log/slog"
 	"gopkg.in/ini.v1"
 )
 

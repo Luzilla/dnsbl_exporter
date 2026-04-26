@@ -8,7 +8,7 @@ import (
 	"github.com/Luzilla/dnsbl_exporter/pkg/ip"
 	"github.com/Luzilla/dnsbl_exporter/pkg/rbl"
 	"github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 const namespace = "luzilla"

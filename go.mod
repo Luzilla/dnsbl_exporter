@@ -10,7 +10,6 @@ require (
 	github.com/miekg/dns v1.1.72
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.7
-	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 	gopkg.in/ini.v1 v1.67.1
 )
 
