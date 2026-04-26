@@ -2,7 +2,11 @@
 
 The following example alerts use the available metrics from the exporter.
 
-## Prometheus
+## Listing
+
+To determine if your host/ip is listed, use one of the following.
+
+### Prometheus
 
 ```yaml
 alerts:
@@ -22,7 +26,7 @@ alerts:
 
 For more details, see the [Prometheus Alerting documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/).
 
-## Prometheus Operator
+### Prometheus Operator
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
@@ -45,3 +49,24 @@ spec:
 ```
 
 For more details, see the [Operator Alerting documentation](https://prometheus-operator.dev/docs/user-guides/alerting/).
+
+## Errors
+
+> [!TIP]
+> New in `v0.13.0`.
+
+The exporter now returns a per-target `luzilla_rbls_errors` gauge with the
+same `(rbl, ip, hostname)` labels as `luzilla_rbls_ips_blacklisted`: `1` if
+the most recent check failed, `0` otherwise.
+
+To collapse it to one alert per RBL, aggregate to a scalar:
+
+```yaml
+- alert: DnsblRblErrors
+  expr: sum by (rbl)(luzilla_rbls_errors) > 0
+  for: 15m
+  labels:
+    severity: warning
+  annotations:
+    summary: RBL {{ $labels.rbl }} is returning errors
+``` 

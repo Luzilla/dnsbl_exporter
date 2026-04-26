@@ -50,8 +50,8 @@ func NewRblCollector(rbls []string, targets []string, domainBased bool, util *dn
 		),
 		errorsMetrics: prometheus.NewDesc(
 			BuildFQName("errors"),
-			"The number of errors which occurred testing the RBLs",
-			[]string{"rbl"},
+			"Whether an error occurred while testing this target against the RBL (1) or not (0)",
+			[]string{"rbl", "ip", "hostname"},
 			nil,
 		),
 		listedMetric: prometheus.NewDesc(
@@ -164,16 +164,17 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 			labelValues := []string{check.Rbl, ip, check.Target.Host}
 
-			// this is an "error" from the RBL/transport
+			errorValue := 0.0
 			if check.Error {
 				c.logger.Error(check.ErrorType.Error(), slog.String("text", check.Text))
-				ch <- prometheus.MustNewConstMetric(
-					c.errorsMetrics,
-					prometheus.GaugeValue,
-					1,
-					[]string{check.Rbl}...,
-				)
+				errorValue = 1
 			}
+			ch <- prometheus.MustNewConstMetric(
+				c.errorsMetrics,
+				prometheus.GaugeValue,
+				errorValue,
+				labelValues...,
+			)
 
 			ch <- prometheus.MustNewConstMetric(
 				c.blacklistedMetric,
