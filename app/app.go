@@ -17,7 +17,7 @@ import (
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/exp/slog"
+	"log/slog"
 
 	x "github.com/miekg/dns"
 )
@@ -142,9 +142,9 @@ func (a *DNSBLApp) Bootstrap() {
 
 		var logHandler slog.Handler
 		if cCtx.String("log.format") == "text" {
-			logHandler = handler.NewTextHandler(writer)
+			logHandler = slog.NewTextHandler(writer, handler)
 		} else {
-			logHandler = handler.NewJSONHandler(writer)
+			logHandler = slog.NewJSONHandler(writer, handler)
 		}
 
 		log := slog.New(logHandler)

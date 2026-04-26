@@ -1,12 +1,13 @@
 package dns
 
 import (
+	"fmt"
 	"net"
 	"strings"
 	"time"
 
 	x "github.com/miekg/dns"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 type DNSUtil struct {
@@ -99,11 +100,24 @@ func (d *DNSUtil) GetTxtRecords(target string) (list []string, err error) {
 
 func (d *DNSUtil) makeQuery(msg *x.Msg) (*x.Msg, error) {
 	result, rt, err := d.client.Exchange(msg, net.JoinHostPort(d.resolver.host, d.resolver.port))
+	if err != nil {
+		return nil, err
+	}
+
 	d.logger.Debug("roundtrip",
 		slog.String("question", msg.Question[0].String()),
+		slog.String("rcode", x.RcodeToString[result.Rcode]),
 		slog.Float64("seconds", rt.Seconds())) // fixme -> histogram
 
-	return result, err
+	// RFC 5782: NOERROR + records means listed; NOERROR with no records or
+	// NXDOMAIN means not listed. Anything else (SERVFAIL, REFUSED, …) is an
+	// outage, not a clean check, and must surface as an error.
+	switch result.Rcode {
+	case x.RcodeSuccess, x.RcodeNameError:
+		return result, nil
+	default:
+		return result, fmt.Errorf("dns: %s", x.RcodeToString[result.Rcode])
+	}
 }
 
 func createQuestion(target string, record uint16) *x.Msg {

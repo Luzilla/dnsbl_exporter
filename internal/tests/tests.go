@@ -8,14 +8,14 @@ import (
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/foxcpp/go-mockdns"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/slog"
+	"log/slog"
 
 	x "github.com/miekg/dns"
 )
 
 func CreateTestLogger(t *testing.T) *slog.Logger {
 	t.Helper()
-	return slog.New(slog.NewTextHandler(os.Stderr))
+	return slog.New(slog.NewTextHandler(os.Stderr, nil))
 }
 
 func CreateDNSUtil(t *testing.T, resolver net.Addr) *dns.DNSUtil {

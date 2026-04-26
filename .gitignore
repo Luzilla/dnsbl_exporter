@@ -1,4 +1,5 @@
 /dist
 /out
 /vendor
+/docs/reviews/
 /.envrc

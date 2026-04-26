@@ -7,7 +7,7 @@ import (
 
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
 	"github.com/Luzilla/godnsbl"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 // RblResult extends godnsbl and adds RBL name
@@ -67,7 +67,7 @@ func (r *RBL) lookup(blocklist string, target Target, c chan<- Result, logger *s
 
 	res, err := r.util.GetARecords(lookup)
 	if err != nil {
-		logger.Error("error occurred fetching A record", slog.String("msg", err.Error()))
+		logger.Error("error occurred fetching A record", slog.Any("err", err))
 
 		result.Error = true
 		result.ErrorType = err
@@ -87,7 +87,7 @@ func (r *RBL) lookup(blocklist string, target Target, c chan<- Result, logger *s
 
 	reason := net.ParseIP(res[0])
 	if reason == nil {
-		logger.Error("error getting (first) reason: %s", strings.Join(res, ", "))
+		logger.Error("error getting (first) reason", slog.String("answers", strings.Join(res, ", ")))
 		result.Error = true
 		result.ErrorType = fmt.Errorf("error getting the (first) reason: %s", strings.Join(res, ", "))
 		c <- result
@@ -106,7 +106,7 @@ func (r *RBL) lookup(blocklist string, target Target, c chan<- Result, logger *s
 		txt, err = r.util.GetTxtRecords(godnsbl.Reverse(reason) + "." + result.Rbl)
 	}
 	if err != nil {
-		logger.Error("error occurred fetching TXT record", slog.String("msg", err.Error()))
+		logger.Error("error occurred fetching TXT record", slog.Any("err", err))
 
 		result.Error = true
 		result.ErrorType = err

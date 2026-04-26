@@ -6,7 +6,7 @@ import (
 
 	"github.com/Luzilla/dnsbl_exporter/config"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -38,7 +38,7 @@ func TestLoadConfig(t *testing.T) {
 		tc := tt
 		t.Run(tc.file, func(t *testing.T) {
 			c := &config.Config{
-				Logger: slog.New(slog.NewTextHandler(os.Stderr)),
+				Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)),
 			}
 			_, err := c.LoadFile(tc.file)
 			if tc.success {
@@ -52,7 +52,7 @@ func TestLoadConfig(t *testing.T) {
 
 func TestValidateConfig(t *testing.T) {
 	c := &config.Config{
-		Logger: slog.New(slog.NewTextHandler(os.Stderr)),
+		Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)),
 	}
 
 	cfg, err := c.LoadFile("./../targets.ini")
