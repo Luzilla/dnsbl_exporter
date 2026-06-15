@@ -10,7 +10,7 @@ require (
 	github.com/miekg/dns v1.1.72
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.7
-	gopkg.in/ini.v1 v1.67.2
+	gopkg.in/ini.v1 v1.67.3
 )
 
 require (
