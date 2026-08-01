@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: zizmorcore/zizmor-action@6599ee8b7a49aef6a770f63d261d214911a7ce02 # v0.6.0
+      - uses: zizmorcore/zizmor-action@6fc4b006235f201fdab3722e17240ab420d580e5 # v0.6.1
 
   build_unbound:
     needs: check
@@ -47,7 +47,7 @@ jobs:
         DOCKER_BUILD_SUMMARY: false
         DOCKER_BUILD_RECORD_UPLOAD: false
     - if: github.event.pull_request.head.repo.full_name == github.repository
-      uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4
+      uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
