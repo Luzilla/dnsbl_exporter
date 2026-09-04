@@ -235,10 +235,13 @@ jobs:
       env:
         BINARY: ./dist/dnsbl_exporter_linux_amd64_v1/dnsbl-exporter
       run: |
+        printf '[targets]\nserver=dbltest.com\n' > targets-domain.ini
+
         ${BINARY} \
           --log.debug \
           --config.dns-resolver=localhost:5053 \
           --config.rbls-domain=./rbls-domain.ini \
+          --config.targets-domain=./targets-domain.ini \
           --web.listen-address=:9212 > dnsbl-combined.log 2>&1 &
         echo $! > dnsbl_exporter_combined.pid
 
@@ -247,7 +250,8 @@ jobs:
     - name: test combined mode metrics
       run: |
         timeout 60 bash -c 'until curl -f http://localhost:9212/; do sleep 1; done'
-        timeout 10 curl -f http://localhost:9212/metrics | grep 'rbl="dbl.spamhaus.org"'
+        timeout 30 curl -f http://localhost:9212/metrics > combined-metrics.txt
+        grep 'rbl="dbl.spamhaus.org"' combined-metrics.txt
     - name: Show logs if failed
       if: failure()
       run: |
