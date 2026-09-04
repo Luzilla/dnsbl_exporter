@@ -28,7 +28,7 @@ func TestCollectorSuite(t *testing.T) {
 			"1.3.3.7/30",     // good
 		}
 
-		c := collector.NewRblCollector(rbls, targets, false, util, logger)
+		c := collector.NewRblCollector(rbls, nil, targets, nil, util, logger)
 
 		result, err := testutil.CollectAndLint(c)
 		assert.Empty(t, result)
@@ -86,7 +86,7 @@ func TestCollectorSuite(t *testing.T) {
 			"example.com", // good
 		}
 
-		c := collector.NewRblCollector(rbls, targets, true, util, logger)
+		c := collector.NewRblCollector(nil, rbls, nil, targets, util, logger)
 
 		result, err := testutil.CollectAndLint(c)
 		assert.Empty(t, result)
@@ -119,6 +119,49 @@ func TestCollectorSuite(t *testing.T) {
 		err = testutil.CollectAndCompare(c, strings.NewReader(expected), metrics...)
 		assert.NoError(t, err)
 	})
+
+	// test=combined-isolated-targets: with distinct target lists per RBL type,
+	// an IP-based target must never surface as a domain-based check and
+	// vice versa.
+	t.Run("test=combined-isolated-targets", func(t *testing.T) {
+		rblsIP := []string{"zen.spamhaus.org"}
+		rblsDomain := []string{"dbl.spamhaus.org"}
+		targetsIP := []string{"79.214.198.85"}   // bad, ip-only
+		targetsDomain := []string{"dbltest.com"} // bad, domain-only
+
+		c := collector.NewRblCollector(rblsIP, rblsDomain, targetsIP, targetsDomain, util, logger)
+
+		result, err := testutil.CollectAndLint(c)
+		assert.Empty(t, result)
+		assert.NoError(t, err)
+
+		metrics := []string{}
+		for _, metric := range []string{"used", "ips_blacklisted", "errors", "listed", "targets"} {
+			metrics = append(metrics, collector.BuildFQName(metric))
+		}
+		expected := `
+      # HELP luzilla_rbls_errors Whether an error occurred while testing this target against the RBL (1) or not (0)
+      # TYPE luzilla_rbls_errors gauge
+      luzilla_rbls_errors{hostname="79.214.198.85",ip="79.214.198.85",rbl="zen.spamhaus.org"} 0
+      luzilla_rbls_errors{hostname="dbltest.com",ip="127.0.1.2",rbl="dbl.spamhaus.org"} 0
+      # HELP luzilla_rbls_ips_blacklisted Blacklisted IPs
+      # TYPE luzilla_rbls_ips_blacklisted gauge
+      luzilla_rbls_ips_blacklisted{hostname="79.214.198.85",ip="79.214.198.85",rbl="zen.spamhaus.org"} 1
+      luzilla_rbls_ips_blacklisted{hostname="dbltest.com",ip="127.0.1.2",rbl="dbl.spamhaus.org"} 1
+      # HELP luzilla_rbls_listed The number of listings in RBLs (this is bad)
+      # TYPE luzilla_rbls_listed gauge
+      luzilla_rbls_listed{rbl="dbl.spamhaus.org"} 1
+      luzilla_rbls_listed{rbl="zen.spamhaus.org"} 1
+      # HELP luzilla_rbls_targets The number of targets that are being probed (configured via targets.ini or ?target=)
+      # TYPE luzilla_rbls_targets gauge
+      luzilla_rbls_targets 2
+      # HELP luzilla_rbls_used The number of RBLs to check IPs against (configured via rbls.ini)
+      # TYPE luzilla_rbls_used gauge
+      luzilla_rbls_used 2
+    `
+		err = testutil.CollectAndCompare(c, strings.NewReader(expected), metrics...)
+		assert.NoError(t, err)
+	})
 }
 
 // TestCollectorErrorsHaveUniqueLabelSets: when more than one target errors
@@ -147,7 +190,7 @@ func TestCollectorErrorsHaveUniqueLabelSets(t *testing.T) {
 	// failing A-record lookup against the dead resolver.
 	targets := []string{"127.0.0.1", "127.0.0.2"}
 
-	c := collector.NewRblCollector(rbls, targets, false, util, logger)
+	c := collector.NewRblCollector(rbls, nil, targets, nil, util, logger)
 
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(c)

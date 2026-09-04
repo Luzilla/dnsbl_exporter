@@ -109,7 +109,12 @@ spec:
             {{- if .Values.config.log.debug }}
             - "--log.debug"
             {{- end }}
-            {{- if .Values.config.domain_based }}
+            {{- if .Values.config.rbls_domain }}
+            - "--config.rbls-domain=/etc/dnsbl-exporter/rbls-domain.ini"
+            {{- if .Values.config.targets_domain }}
+            - "--config.targets-domain=/etc/dnsbl-exporter/targets-domain.ini"
+            {{- end }}
+            {{- else if .Values.config.domain_based }}
             - "--config.domain-based"
             {{- end }}
       volumes:
