@@ -24,6 +24,11 @@ lookup, and every domain based target also gets resolved and checked
 against the IP based RBLs — so set `--config.targets-domain` whenever the
 two checklists are meant to cover different targets.
 
+`--config.rbls-domain` takes precedence over `--config.domain-based` when
+both are set (a warning is logged). If you're migrating a legacy
+`--config.domain-based` deployment to combined mode, remove
+`--config.domain-based` once `--config.rbls-domain` is configured.
+
 Otherwise:
 
 ```sh

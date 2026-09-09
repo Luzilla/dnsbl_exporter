@@ -251,7 +251,7 @@ jobs:
       run: |
         timeout 60 bash -c 'until curl -f http://localhost:9212/; do sleep 1; done'
         timeout 30 curl -f http://localhost:9212/metrics > combined-metrics.txt
-        grep 'rbl="dbl.spamhaus.org"' combined-metrics.txt
+        grep -E '^luzilla_rbls_(ips_blacklisted|errors)\{.*hostname="dbltest.com".*rbl="dbl.spamhaus.org".*\}' combined-metrics.txt
     - name: Show logs if failed
       if: failure()
       run: |
