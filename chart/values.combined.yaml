@@ -1,0 +1,13 @@
+# check IP and domain based RBLs from a single deployment, each against its
+# own, isolated set of targets
+config:
+  rbls:
+  - ix.dnsbl.manitu.net
+  - zen.spamhaus.org
+  targets:
+  - mail.messagingengine.com
+  - smtp.gmail.com
+  rbls_domain:
+  - dbl.spamhaus.org
+  targets_domain:
+  - mailerlite.com
