@@ -7,8 +7,8 @@ import (
 	"log/slog"
 )
 
-func CreateCollector(rbls []string, targets []string, domainBased bool, dnsUtil *dns.DNSUtil, logger *slog.Logger) *collector.RblCollector {
-	return collector.NewRblCollector(rbls, targets, domainBased, dnsUtil, logger)
+func CreateCollector(rblsIP []string, rblsDomain []string, targetsIP []string, targetsDomain []string, dnsUtil *dns.DNSUtil, logger *slog.Logger) *collector.RblCollector {
+	return collector.NewRblCollector(rblsIP, rblsDomain, targetsIP, targetsDomain, dnsUtil, logger)
 }
 
 func CreateRegistry() *prometheus.Registry {
