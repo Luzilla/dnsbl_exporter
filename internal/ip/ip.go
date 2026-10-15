@@ -2,9 +2,16 @@ package ip
 
 import (
 	"encoding/binary"
+	"log/slog"
 	"net"
 	"slices"
 )
+
+// largeExpansionThreshold is the number of hosts a single CIDR may expand
+// to before we log a warning. /22 = 1022 hosts (silent), /21 = 2046 hosts
+// (warns). A /16 (65534 hosts) trivially trips this and produces a scrape
+// load that will get the resolver rate-limited by most public RBLs.
+const largeExpansionThreshold = 1024
 
 func getIPsFromCIDR(ipv4Net *net.IPNet) []string {
 	// Convert IPNet mask and IP address to uint32
@@ -46,11 +53,18 @@ func getIPsFromCIDR(ipv4Net *net.IPNet) []string {
 	return ips
 }
 
-func ExpandCIDRs(hosts []string) (newHosts []string) {
+func ExpandCIDRs(hosts []string, logger *slog.Logger) (newHosts []string) {
 	for _, host := range hosts {
 		// If it's a CIDR
 		if _, ipNet, err := net.ParseCIDR(host); err == nil {
-			for _, ip := range getIPsFromCIDR(ipNet) {
+			ips := getIPsFromCIDR(ipNet)
+			if len(ips) >= largeExpansionThreshold {
+				logger.Warn("CIDR expands to a large number of hosts; scrape load and resolver rate-limiting risk",
+					slog.String("cidr", host),
+					slog.Int("hosts", len(ips)),
+				)
+			}
+			for _, ip := range ips {
 				// Only add IP to slice if it doesn't already exist
 				if !slices.Contains(newHosts, ip) {
 					newHosts = append(newHosts, ip)
