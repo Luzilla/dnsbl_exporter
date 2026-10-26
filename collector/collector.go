@@ -22,10 +22,11 @@ type RblCollector struct {
 	listedMetric      *prometheus.Desc
 	targetsMetric     *prometheus.Desc
 	durationMetric    *prometheus.Desc
-	rbls              []string
+	rblsIP            []string
+	rblsDomain        []string
 	util              *dns.DNSUtil
-	targets           []string
-	domainBased       bool
+	targetsIP         []string
+	targetsDomain     []string
 	logger            *slog.Logger
 }
 
@@ -33,8 +34,10 @@ func BuildFQName(metric string) string {
 	return prometheus.BuildFQName(namespace, subsystem, metric)
 }
 
-// NewRblCollector ... creates the collector
-func NewRblCollector(rbls []string, targets []string, domainBased bool, util *dns.DNSUtil, logger *slog.Logger) *RblCollector {
+// NewRblCollector ... creates the collector. rblsIP is checked against
+// targetsIP resolved to IPs, rblsDomain is checked against targetsDomain
+// used as-is. Either pair may be empty to run in a single-mode configuration.
+func NewRblCollector(rblsIP []string, rblsDomain []string, targetsIP []string, targetsDomain []string, util *dns.DNSUtil, logger *slog.Logger) *RblCollector {
 	return &RblCollector{
 		configuredMetric: prometheus.NewDesc(
 			BuildFQName("used"),
@@ -72,11 +75,12 @@ func NewRblCollector(rbls []string, targets []string, domainBased bool, util *dn
 			nil,
 			nil,
 		),
-		rbls:        rbls,
-		util:        util,
-		targets:     targets,
-		domainBased: domainBased,
-		logger:      logger,
+		rblsIP:        rblsIP,
+		rblsDomain:    rblsDomain,
+		util:          util,
+		targetsIP:     targetsIP,
+		targetsDomain: targetsDomain,
+		logger:        logger,
 	}
 }
 
@@ -93,18 +97,19 @@ func (c *RblCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect ...
 func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 	// these are our targets to check
-	hosts := ip.ExpandCIDRs(c.targets)
+	hostsIP := ip.ExpandCIDRs(c.targetsIP)
+	hostsDomain := ip.ExpandCIDRs(c.targetsDomain)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.configuredMetric,
 		prometheus.GaugeValue,
-		float64(len(c.rbls)),
+		float64(len(c.rblsIP)+len(c.rblsDomain)),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.targetsMetric,
 		prometheus.GaugeValue,
-		float64(len(hosts)),
+		float64(len(hostsIP)+len(hostsDomain)),
 	)
 
 	start := time.Now()
@@ -114,31 +119,70 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 
 	resolver := rbl.NewRBLResolver(c.logger, c.util)
 
-	// iterate over hosts -> resolve to ip
-	targets := make(chan rbl.Target)
-	wg := sync.WaitGroup{}
-	wg.Add(len(hosts))
-	go func() {
-		wg.Wait()
-		close(targets)
-	}()
-	for _, host := range hosts {
-		if c.domainBased {
+	// domain based RBLs: targets are used as-is, no resolution needed
+	if len(c.rblsDomain) > 0 {
+		targets := make(chan rbl.Target)
+		wg := sync.WaitGroup{}
+		wg.Add(len(hostsDomain))
+		go func() {
+			wg.Wait()
+			close(targets)
+		}()
+		for _, host := range hostsDomain {
 			go func(hostname string) {
 				targets <- rbl.Target{Host: hostname}
 				wg.Done()
 			}(host)
-		} else {
+		}
+		c.check(targets, c.rblsDomain, &listed, ch)
+	}
+
+	// IP based RBLs: targets are resolved to IPs first
+	if len(c.rblsIP) > 0 {
+		targets := make(chan rbl.Target)
+		wg := sync.WaitGroup{}
+		wg.Add(len(hostsIP))
+		go func() {
+			wg.Wait()
+			close(targets)
+		}()
+		for _, host := range hostsIP {
 			go resolver.Do(host, targets, wg.Done)
 		}
+		c.check(targets, c.rblsIP, &listed, ch)
 	}
-	// run the check
+
+	c.logger.Debug("building listed metric")
+
+	for _, rbl := range append(append([]string{}, c.rblsIP...), c.rblsDomain...) {
+		val, _ := listed.LoadOrStore(rbl, 0)
+		ch <- prometheus.MustNewConstMetric(
+			c.listedMetric,
+			prometheus.GaugeValue,
+			float64(val.(int)),
+			[]string{rbl}...,
+		)
+	}
+
+	c.logger.Debug("finished")
+
+	ch <- prometheus.MustNewConstMetric(
+		c.durationMetric,
+		prometheus.GaugeValue,
+		time.Since(start).Seconds(),
+	)
+
+}
+
+// check runs the given RBLs against every target on the channel, emitting
+// the errors/blacklisted metrics and tallying listings into listed.
+func (c *RblCollector) check(targets <-chan rbl.Target, rbls []string, listed *sync.Map, ch chan<- prometheus.Metric) {
 	for target := range targets {
 
 		results := make([]rbl.Result, 0)
 
 		result := make(chan rbl.Result)
-		for _, blocklist := range c.rbls {
+		for _, blocklist := range rbls {
 			logger := c.logger.With("host", target.Host)
 
 			logger.Debug("starting check")
@@ -184,25 +228,4 @@ func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 			)
 		}
 	}
-
-	c.logger.Debug("building listed metric")
-
-	for _, rbl := range c.rbls {
-		val, _ := listed.LoadOrStore(rbl, 0)
-		ch <- prometheus.MustNewConstMetric(
-			c.listedMetric,
-			prometheus.GaugeValue,
-			float64(val.(int)),
-			[]string{rbl}...,
-		)
-	}
-
-	c.logger.Debug("finished")
-
-	ch <- prometheus.MustNewConstMetric(
-		c.durationMetric,
-		prometheus.GaugeValue,
-		time.Since(start).Seconds(),
-	)
-
 }
