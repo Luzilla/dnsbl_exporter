@@ -67,6 +67,18 @@ func NewApp(name string, version string) DNSBLApp {
 			Value: false,
 		},
 		&cli.StringFlag{
+			Name:    "config.rbls-domain",
+			Value:   "",
+			Usage:   "Configuration file which contains domain based RBLs, checked in addition to --config.rbls. Set this to check IP and domain based RBLs from the same deployment.",
+			EnvVars: []string{"DNSBL_EXP_RBLS_DOMAIN"},
+		},
+		&cli.StringFlag{
+			Name:    "config.targets-domain",
+			Value:   "",
+			Usage:   "Configuration file which contains the targets to check against --config.rbls-domain. Defaults to --config.targets when unset.",
+			EnvVars: []string{"DNSBL_EXP_TARGETS_DOMAIN"},
+		},
+		&cli.StringFlag{
 			Name:    "web.listen-address",
 			Value:   ":9211",
 			Usage:   "Address to listen on for web interface and telemetry.",
@@ -203,6 +215,53 @@ func (a *DNSBLApp) Bootstrap() {
 		rbls := c.GetRbls(cfgRbls)
 		targets := c.GetTargets(cfgTargets)
 
+		var rblsIP, rblsDomain, targetsIP, targetsDomain []string
+
+		if rblsDomainFile := cCtx.String("config.rbls-domain"); rblsDomainFile != "" {
+			// combined mode: --config.rbls/--config.targets are IP based, this file adds domain based RBLs
+			if cCtx.Bool("config.domain-based") {
+				log.Warn("--config.domain-based is ignored while --config.rbls-domain is set")
+			}
+
+			cfgRblsDomain, err := c.LoadFile(rblsDomainFile)
+			if err != nil {
+				return err
+			}
+
+			err = c.ValidateConfig(cfgRblsDomain, "rbl")
+			if err != nil {
+				return fmt.Errorf("unable to load the domain based rbls from the config: %w", err)
+			}
+
+			rblsIP = rbls
+			rblsDomain = c.GetRbls(cfgRblsDomain)
+			targetsIP = targets
+			targetsDomain = targets
+
+			if targetsDomainFile := cCtx.String("config.targets-domain"); targetsDomainFile != "" {
+				cfgTargetsDomain, err := c.LoadFile(targetsDomainFile)
+				if err != nil {
+					return err
+				}
+
+				err = c.ValidateConfig(cfgTargetsDomain, "targets")
+				if err != nil {
+					if !errors.Is(err, config.ErrNoServerEntries) && !errors.Is(err, config.ErrNoSuchSection) {
+						return err
+					}
+					log.Info("starting exporter without domain based targets — check the /prober endpoint or correct the .ini file")
+				}
+
+				targetsDomain = c.GetTargets(cfgTargetsDomain)
+			}
+		} else if cCtx.Bool("config.domain-based") {
+			rblsDomain = rbls
+			targetsDomain = targets
+		} else {
+			rblsIP = rbls
+			targetsIP = targets
+		}
+
 		registry := setup.CreateRegistry()
 
 		dnsUtil, err := dns.New(new(x.Client), resolver, log)
@@ -211,7 +270,7 @@ func (a *DNSBLApp) Bootstrap() {
 			return err
 		}
 
-		rblCollector := setup.CreateCollector(rbls, targets, cCtx.Bool("config.domain-based"), dnsUtil, log.With("area", "metrics"))
+		rblCollector := setup.CreateCollector(rblsIP, rblsDomain, targetsIP, targetsDomain, dnsUtil, log.With("area", "metrics"))
 		registry.MustRegister(rblCollector)
 
 		registryExporter := setup.CreateRegistry()
@@ -233,10 +292,10 @@ func (a *DNSBLApp) Bootstrap() {
 		http.Handle(cCtx.String("web.telemetry-path"), mHandler.Handler())
 
 		pHandler := prober.ProberHandler{
-			DNS:         dnsUtil,
-			Rbls:        rbls,
-			DomainBased: cCtx.Bool("config.domain-based"),
-			Logger:      log.With("area", "prober"),
+			DNS:        dnsUtil,
+			RblsIP:     rblsIP,
+			RblsDomain: rblsDomain,
+			Logger:     log.With("area", "prober"),
 		}
 		http.Handle("/prober", pHandler)
 
