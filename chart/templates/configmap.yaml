@@ -15,3 +15,17 @@ data:
     {{- range $value := .Values.config.rbls }}
     server={{ $value }}
     {{- end }}
+  {{- if .Values.config.rbls_domain }}
+  rbls-domain.ini: |-
+    [rbl]
+    {{- range $value := .Values.config.rbls_domain }}
+    server={{ $value }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.config.targets_domain }}
+  targets-domain.ini: |-
+    [targets]
+    {{- range $value := .Values.config.targets_domain }}
+    server={{ $value }}
+    {{- end }}
+  {{- end }}

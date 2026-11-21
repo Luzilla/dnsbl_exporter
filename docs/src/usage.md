@@ -8,6 +8,27 @@ See `rbls.ini` and `targets.ini` files in the repository for examples.
 
 The files follow the Nagios format as this exporter is meant to be a drop-in replacement so you can factor out Nagios, one (simple) step at a time. 😊
 
+### Checking both IP and domain based RBLs
+
+By default `--config.rbls` is checked as an IP based blocklist (targets are
+resolved to IPs first), or, when `--config.domain-based` is set, as a domain
+based blocklist (targets are used as-is).
+
+To check both from the same deployment, set `--config.rbls-domain` to a file
+containing domain based RBLs (e.g. `dbl.spamhaus.org`); `--config.rbls` then
+stays IP based. Every target from `--config.targets` is checked against
+**both** lists, unless you also set `--config.targets-domain` to give the
+domain based checklist its own, separate target list. Without it, an IP
+literal in `--config.targets` gets a (harmless but pointless) domain-style
+lookup, and every domain based target also gets resolved and checked
+against the IP based RBLs — so set `--config.targets-domain` whenever the
+two checklists are meant to cover different targets.
+
+`--config.rbls-domain` takes precedence over `--config.domain-based` when
+both are set (a warning is logged). If you're migrating a legacy
+`--config.domain-based` deployment to combined mode, remove
+`--config.domain-based` once `--config.rbls-domain` is configured.
+
 Otherwise:
 
 ```sh
@@ -15,7 +36,9 @@ $ dnsbl-exporter -h
 ...
 --config.dns-resolver value  IP address of the resolver to use. (default: "127.0.0.1:53")
 --config.rbls value          Configuration file which contains RBLs (default: "./rbls.ini")
+--config.rbls-domain value   Configuration file which contains domain based RBLs, checked in addition to --config.rbls
 --config.targets value       Configuration file which contains the targets to check. (default: "./targets.ini")
+--config.targets-domain value  Configuration file which contains the targets to check against --config.rbls-domain. Defaults to --config.targets when unset.
 --config.domain-based        RBLS are domain instead of IP based blocklists (default: false)
 --web.listen-address value   Address to listen on for web interface and telemetry. (default: ":9211")
 --web.telemetry-path value   Path under which to expose metrics. (default: "/metrics")
