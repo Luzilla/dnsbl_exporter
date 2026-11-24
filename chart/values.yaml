@@ -72,7 +72,7 @@ affinity: {}
 config:
   # by default, we use unbound in the same pod, set this otherwise
   resolver: ""
-  # content of `rbls.ini`
+  # content of `rbls.ini`, checked as IP based blocklists (unless domain_based is true, see below)
   rbls:
   - ix.dnsbl.manitu.net
   - server=zen.spamhaus.org
@@ -83,8 +83,18 @@ config:
   - mail.gmx.net
   - smtp.yahoo.com
   - smtp.fastmail.com
-  # domain based RBLs: --config.domain-based
+  # deprecated: treats `rbls` above as domain based blocklists instead of IP
+  # based ones (--config.domain-based). Prefer `rbls_domain` below, which
+  # checks both IP and domain based RBLs from the same deployment.
   domain_based: false
+  # content of `rbls-domain.ini`: domain based RBLs, checked in addition to
+  # `rbls` above (--config.rbls-domain). Leave empty to check IP based RBLs
+  # only.
+  rbls_domain: []
+  # content of `targets-domain.ini`: targets checked against `rbls_domain`
+  # above (--config.targets-domain). Falls back to `targets` above when left
+  # empty, which also runs those targets through the IP based RBLs.
+  targets_domain: []
   # logging
   log:
     # --log.format=text or json
