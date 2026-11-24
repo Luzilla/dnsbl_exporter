@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/Luzilla/dnsbl_exporter/pkg/dns"
-	"github.com/Luzilla/dnsbl_exporter/pkg/ip"
+	"github.com/Luzilla/dnsbl_exporter/internal/ip"
 	"github.com/Luzilla/dnsbl_exporter/pkg/rbl"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
@@ -93,7 +93,7 @@ func (c *RblCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect ...
 func (c *RblCollector) Collect(ch chan<- prometheus.Metric) {
 	// these are our targets to check
-	hosts := ip.ExpandCIDRs(c.targets)
+	hosts := ip.ExpandCIDRs(c.targets, c.logger)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.configuredMetric,

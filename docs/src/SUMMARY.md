@@ -5,6 +5,8 @@
   - [DNS](./dns.md)
   - [Operation Modes](./operation-modes.md)
   - [Alerting](./alerting.md)
+- [Config](./config/index.md)
+  - [CIDR targets](./config/cidr.md)
 - [Deployment](./deployment/index.md)
   - [Standalone](./deployment/standalone.md)
   - [Packages](./deployment/packages.md)
